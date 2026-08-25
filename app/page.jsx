@@ -457,11 +457,21 @@ export default function HomePage() {
         </div>
 
         <nav className="nav" aria-label="Principal">
-          {Object.entries(views).map(([id, label]) => (
+          <button className={`nav-item ${activeView === "dashboard" ? "active" : ""}`} type="button" onClick={() => setActiveView("dashboard")}>Panel</button>
+          <span className="nav-group-label">Taller / recepcion</span>
+          {["reception", "vehicles", "orders", "history", "closeout"].map((id) => (
             <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
-              {label}
+              {views[id]}
             </button>
           ))}
+          <span className="nav-group-label">Repuestos / stock</span>
+          {["inventory", "backup"].map((id) => (
+            <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
+              {views[id]}
+            </button>
+          ))}
+          <span className="nav-group-label">Sistema</span>
+          <button className={`nav-item ${activeView === "account" ? "active" : ""}`} type="button" onClick={() => setActiveView("account")}>Cuenta</button>
         </nav>
 
         <div className="session-box">
@@ -487,6 +497,31 @@ export default function HomePage() {
         </header>
 
         <section className={`view ${activeView === "dashboard" ? "active" : ""}`}>
+          <div className="business-grid">
+            <article className="business-card workshop-card">
+              <div>
+                <p className="eyebrow">Taller / recepcion</p>
+                <h2>Vehiculos, clientes y ordenes</h2>
+                <p>Operacion del mostrador: entra el auto, se abre la orden y queda historial por patente.</p>
+              </div>
+              <div className="business-actions">
+                <button className="primary-button" type="button" onClick={() => setActiveView("reception")}>Recibir vehiculo</button>
+                <button className="ghost-button" type="button" onClick={() => setActiveView("vehicles")}>Ver vehiculos</button>
+              </div>
+            </article>
+            <article className="business-card parts-card">
+              <div>
+                <p className="eyebrow">Repuestos / stock</p>
+                <h2>Inventario separado</h2>
+                <p>Control de repuestos, costos, precios, stock critico y pedido sugerido por WhatsApp.</p>
+              </div>
+              <div className="business-actions">
+                <button className="primary-button" type="button" onClick={() => setActiveView("inventory")}>Gestionar repuestos</button>
+                <button className="ghost-button" type="button" onClick={sendLowStockWhatsapp}>Pedido stock</button>
+              </div>
+            </article>
+          </div>
+
           <div className="metrics-grid">
             <article className="metric"><span>Vehiculos registrados</span><strong>{data.vehicles.length}</strong></article>
             <article className="metric"><span>En taller</span><strong>{activeVehicles}</strong></article>
