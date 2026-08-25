@@ -31,6 +31,8 @@ const views = {
   orders: "Ordenes",
   inventory: "Inventario",
   history: "Historial",
+  closeout: "Cierre",
+  backup: "Respaldo",
   account: "Cuenta"
 };
 
@@ -51,11 +53,14 @@ export default function HomePage() {
   const [history, setHistory] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [partSearch, setPartSearch] = useState("");
+  const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
 
   const stateCount = useMemo(() => Object.keys(summary.workOrdersByState || {}).length, [summary]);
   const latestOrders = useMemo(() => data.workOrders.slice(0, 6), [data.workOrders]);
   const lowStockParts = useMemo(() => data.parts.filter((part) => Number(part.stock) <= Number(part.minimumStock || 0)), [data.parts]);
+  const inventoryValue = useMemo(() => data.parts.reduce((total, part) => total + Number(part.stock || 0) * Number(part.cost || 0), 0), [data.parts]);
+  const finishedOrders = useMemo(() => data.workOrders.filter((order) => ["listo", "entregado"].includes(order.state)).length, [data.workOrders]);
 
   const filteredOrders = useMemo(() => {
     const term = orderSearch.trim().toLowerCase();
@@ -80,6 +85,13 @@ export default function HomePage() {
   function addLog(message, payload) {
     const line = payload ? `${message}\n${JSON.stringify(payload, null, 2)}` : message;
     setLog((items) => [`${new Date().toLocaleTimeString()} ${line}`, ...items].slice(0, 16));
+    showToast(message);
+  }
+
+  function showToast(message) {
+    setToast(message);
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => setToast(""), 2600);
   }
 
   function vehicleById(id) {
@@ -176,6 +188,47 @@ export default function HomePage() {
     setActiveView("reception");
   }
 
+  async function seedWorkshopDemo() {
+    setBusy(true);
+    try {
+      const suffix = Date.now().toString().slice(-4);
+      const customer = await api("/customers", {
+        method: "POST",
+        body: JSON.stringify({ name: "Cliente demostracion", phone: "+569 1111 2222" })
+      });
+      const vehicle = await api("/vehicles", {
+        method: "POST",
+        body: JSON.stringify({
+          customerId: customer.data.id,
+          plate: `DEMO${suffix}`,
+          brand: "Toyota",
+          model: "Yaris",
+          mileage: 72400
+        })
+      });
+      await api("/work-orders", {
+        method: "POST",
+        body: JSON.stringify({
+          vehicleId: vehicle.data.id,
+          reason: "Revision general y scanner",
+          mileage: 72400,
+          priority: "alta"
+        })
+      });
+      await Promise.all([
+        api("/parts", { method: "POST", body: JSON.stringify({ sku: `ACE-${suffix}`, name: "Aceite 5W30", cost: 4500, price: 7900, stock: 8, minimumStock: 3 }) }),
+        api("/parts", { method: "POST", body: JSON.stringify({ sku: `FIL-${suffix}`, name: "Filtro aceite", cost: 2800, price: 5900, stock: 2, minimumStock: 4 }) })
+      ]);
+      await refresh();
+      setActiveView("dashboard");
+      addLog("Demo de taller cargada");
+    } catch (error) {
+      addLog(`Error demo: ${error.message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitQuickReception(event) {
     event.preventDefault();
     setBusy(true);
@@ -264,6 +317,46 @@ export default function HomePage() {
     }
   }
 
+  function exportBackup() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      project: "taller-automotriz-pablo",
+      customers: data.customers,
+      vehicles: data.vehicles,
+      workOrders: data.workOrders,
+      parts: data.parts,
+      summary
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `taller-pablo-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    addLog("Respaldo exportado");
+  }
+
+  function sendLowStockWhatsapp() {
+    if (lowStockParts.length === 0) {
+      showToast("No hay repuestos bajo stock");
+      return;
+    }
+    const lines = lowStockParts.map((part) => `- ${part.name} (${part.sku}): stock ${part.stock}, minimo ${part.minimumStock}`);
+    const message = encodeURIComponent(["Pedido sugerido Taller Pablo:", ...lines, "", "Revisar cantidades antes de comprar."].join("\n"));
+    window.open(`https://wa.me/?text=${message}`, "_blank", "noopener,noreferrer");
+    addLog("Pedido de stock preparado");
+  }
+
+  function logout() {
+    localStorage.removeItem("token");
+    setToken("");
+    setSession("Sin sesion");
+    setData({ customers: [], vehicles: [], workOrders: [], parts: [] });
+    setSummary({ openWorkOrders: 0, lowStockCount: 0, workOrdersByState: {} });
+    showToast("Sesion cerrada");
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem("token");
     if (saved) {
@@ -303,6 +396,7 @@ export default function HomePage() {
           <strong>Taller Automotriz Pablo</strong>
           <small>{session}</small>
           <button className="ghost-button" type="button" onClick={() => refresh().catch((error) => addLog(`Error refrescar: ${error.message}`))}>Actualizar</button>
+          <button className="ghost-button" type="button" onClick={logout}>Cerrar sesion</button>
         </div>
       </aside>
 
@@ -315,6 +409,7 @@ export default function HomePage() {
           <div className="topbar-actions">
             <span className="sync-pill">Demo local</span>
             <button className="ghost-button" type="button" onClick={fillDemoReception}>Datos demo</button>
+            <button className="ghost-button" type="button" onClick={seedWorkshopDemo} disabled={busy}>Demo taller</button>
           </div>
         </header>
 
@@ -322,7 +417,7 @@ export default function HomePage() {
           <div className="metrics-grid">
             <article className="metric"><span>Ordenes abiertas</span><strong>{summary.openWorkOrders}</strong></article>
             <article className="metric"><span>Vehiculos</span><strong>{data.vehicles.length}</strong></article>
-            <article className="metric"><span>Repuestos</span><strong>{data.parts.length}</strong></article>
+            <article className="metric"><span>Valor inventario</span><strong>{money(inventoryValue)}</strong></article>
             <article className="metric warning"><span>Stock bajo</span><strong>{summary.lowStockCount}</strong></article>
           </div>
 
@@ -342,7 +437,10 @@ export default function HomePage() {
             <section className="panel">
               <div className="panel-head">
                 <h2>Alertas de stock</h2>
-                <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Revisar</button>
+                <div className="button-row">
+                  <button className="ghost-button" type="button" onClick={sendLowStockWhatsapp}>Enviar pedido</button>
+                  <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Revisar</button>
+                </div>
               </div>
               <div className="list">
                 {lowStockParts.length === 0 ? <div className="empty-state">Sin alertas.</div> : lowStockParts.map((part) => (
@@ -500,6 +598,48 @@ export default function HomePage() {
             </section>
           </div>
         </section>
+
+        <section className={`view ${activeView === "closeout" ? "active" : ""}`}>
+          <div className="metrics-grid">
+            <article className="metric"><span>Ordenes totales</span><strong>{data.workOrders.length}</strong></article>
+            <article className="metric"><span>Abiertas</span><strong>{summary.openWorkOrders}</strong></article>
+            <article className="metric"><span>Listas / entregadas</span><strong>{finishedOrders}</strong></article>
+            <article className="metric warning"><span>Stock bajo</span><strong>{summary.lowStockCount}</strong></article>
+          </div>
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Resumen operativo</h2>
+              <button className="primary-button" type="button" onClick={exportBackup}>Exportar cierre</button>
+            </div>
+            <div className="list">
+              {Object.entries(summary.workOrdersByState || {}).map(([state, count]) => (
+                <div className="list-item" key={state}><strong>{state}</strong><span>{count} ordenes</span></div>
+              ))}
+              {stateCount === 0 ? <div className="empty-state">Aun no hay movimientos para cerrar.</div> : null}
+            </div>
+          </section>
+        </section>
+
+        <section className={`view ${activeView === "backup" ? "active" : ""}`}>
+          <div className="split">
+            <section className="panel">
+              <div className="panel-head"><h2>Respaldo</h2></div>
+              <div className="list">
+                <div className="list-item"><strong>Clientes</strong><span>{data.customers.length}</span></div>
+                <div className="list-item"><strong>Vehiculos</strong><span>{data.vehicles.length}</span></div>
+                <div className="list-item"><strong>Ordenes</strong><span>{data.workOrders.length}</span></div>
+                <div className="list-item"><strong>Repuestos</strong><span>{data.parts.length}</span></div>
+              </div>
+              <button className="primary-button full" type="button" onClick={exportBackup}>Descargar JSON</button>
+            </section>
+            <section className="panel">
+              <div className="panel-head"><h2>Formato</h2></div>
+              <pre>{JSON.stringify({ customers: data.customers.length, vehicles: data.vehicles.length, workOrders: data.workOrders.length, parts: data.parts.length }, null, 2)}</pre>
+            </section>
+          </div>
+        </section>
+
+        <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
       </section>
     </main>
   );

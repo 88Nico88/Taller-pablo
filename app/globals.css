@@ -37,6 +37,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 input,
 select {
   width: 100%;
@@ -232,6 +237,7 @@ label {
 
 .metric strong {
   font-size: 32px;
+  overflow-wrap: anywhere;
 }
 
 .metric.warning {
@@ -448,6 +454,30 @@ pre {
   white-space: pre-wrap;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 32px));
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  background: #101828;
+  color: white;
+  box-shadow: 0 18px 40px rgba(16, 24, 40, 0.24);
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (max-width: 1040px) {
