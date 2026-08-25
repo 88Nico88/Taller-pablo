@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f7f8;
-  color: #172026;
+  background: #f3f5f7;
+  color: #182127;
 }
 
 * {
@@ -23,24 +23,36 @@ button {
   min-height: 42px;
   border: 0;
   border-radius: 6px;
-  background: #0b5c7a;
+  background: #126a75;
   color: white;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
 }
 
 button:hover {
-  background: #084760;
+  background: #0d535c;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.75;
 }
 
 input,
 select {
   width: 100%;
-  min-height: 40px;
-  border: 1px solid #c8d3d8;
+  min-height: 42px;
+  border: 1px solid #cbd5da;
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 9px 11px;
   background: white;
+  color: #182127;
+}
+
+input:focus,
+select:focus {
+  border-color: #126a75;
+  outline: 3px solid rgba(18, 106, 117, 0.14);
 }
 
 label {
@@ -48,19 +60,19 @@ label {
   gap: 6px;
   color: #52616a;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 240px 1fr;
 }
 
 .sidebar {
-  background: #15252e;
+  background: #14242a;
   color: white;
-  padding: 24px 20px;
+  padding: 22px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -69,7 +81,7 @@ label {
 
 .sidebar-main {
   display: grid;
-  gap: 32px;
+  gap: 28px;
 }
 
 .sidebar h1,
@@ -81,15 +93,15 @@ label {
 }
 
 .sidebar h1 {
-  font-size: 24px;
-  line-height: 1.1;
+  font-size: 23px;
+  line-height: 1.12;
 }
 
 .eyebrow {
   margin: 0 0 6px;
-  color: #6fb6c8;
+  color: #e0a73a;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
 }
 
@@ -106,7 +118,7 @@ nav a {
 }
 
 nav a:hover {
-  background: #233946;
+  background: #233942;
 }
 
 .session {
@@ -116,8 +128,8 @@ nav a:hover {
 
 .workspace {
   display: grid;
-  gap: 20px;
-  padding: 24px;
+  gap: 18px;
+  padding: 22px;
 }
 
 .topbar {
@@ -125,26 +137,81 @@ nav a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #dbe3e7;
-  padding-bottom: 18px;
+  border-bottom: 1px solid #d8e1e5;
+  padding-bottom: 16px;
 }
 
 .topbar h2 {
-  font-size: 26px;
+  font-size: 25px;
 }
 
-.grid {
+.top-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ghost,
+.chip {
+  background: white;
+  color: #126a75;
+  border: 1px solid #b8c9cf;
+}
+
+.ghost:hover,
+.chip:hover {
+  background: #e8f4f5;
+}
+
+.metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metrics.strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metrics div {
+  background: white;
+  border: 1px solid #d8e1e5;
+  border-left: 4px solid #e0a73a;
+  border-radius: 8px;
+  padding: 13px 14px;
+  display: grid;
+  gap: 5px;
+}
+
+.metrics span {
+  color: #52616a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metrics strong {
+  font-size: 27px;
+}
+
+.workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 0.9fr);
   gap: 16px;
+  align-items: start;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
 }
 
 .panel,
 .band {
   background: white;
-  border: 1px solid #dbe3e7;
+  border: 1px solid #d8e1e5;
   border-radius: 8px;
-  padding: 18px;
+  padding: 17px;
 }
 
 .panel {
@@ -153,34 +220,101 @@ nav a:hover {
   align-content: start;
 }
 
+.hero-panel {
+  border-top: 4px solid #126a75;
+}
+
+.compact-panel {
+  min-height: 100%;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
 .panel h3,
 .band h3 {
   font-size: 18px;
 }
 
-.metrics {
-  margin-top: 14px;
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  background: #fff2d8;
+  color: #805312;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.quick-grid,
+.mini-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.metrics div {
-  border: 1px solid #dbe3e7;
-  border-radius: 8px;
-  padding: 14px;
-  display: grid;
+.order-row {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+
+.plate-input {
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.chips {
+  display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.metrics span {
-  color: #52616a;
+.chip {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.primary-action {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+.order-list {
+  display: grid;
+  gap: 9px;
+}
+
+.order-item {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #e1e8eb;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fbfcfd;
+}
+
+.order-item strong {
+  font-size: 16px;
+}
+
+.order-item span,
+.order-item em,
+.empty {
+  color: #586872;
   font-size: 13px;
-  font-weight: 700;
 }
 
-.metrics strong {
-  font-size: 28px;
+.order-item em {
+  font-style: normal;
+  font-weight: 800;
 }
 
 .row {
@@ -190,7 +324,7 @@ nav a:hover {
 }
 
 pre {
-  max-height: 260px;
+  max-height: 230px;
   overflow: auto;
   margin: 0;
   white-space: pre-wrap;
@@ -198,8 +332,22 @@ pre {
   line-height: 1.5;
 }
 
-@media (max-width: 860px) {
-  .app-shell {
+@media (max-width: 1060px) {
+  .workbench,
+  .tools-grid,
+  .metrics.strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell,
+  .workbench,
+  .tools-grid,
+  .metrics.strip,
+  .quick-grid,
+  .mini-grid,
+  .order-row {
     grid-template-columns: 1fr;
   }
 
@@ -208,7 +356,7 @@ pre {
   }
 
   nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .topbar {
@@ -216,9 +364,9 @@ pre {
     flex-direction: column;
   }
 
-  .grid,
-  .metrics {
-    grid-template-columns: 1fr;
+  .top-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .workspace {
