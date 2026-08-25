@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Taller Automotriz</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Operacion</p>
+          <h1>Taller Automotriz</h1>
+        </div>
+        <nav>
+          <a href="#dashboard">Dashboard</a>
+          <a href="#cliente">Cliente</a>
+          <a href="#vehiculo">Vehiculo</a>
+          <a href="#orden">Orden</a>
+          <a href="#inventario">Inventario</a>
+          <a href="#historial">Historial</a>
+        </nav>
+        <div class="session">
+          <span id="sessionState">Sin sesion</span>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">MVP operativo</p>
+            <h2>Recepcion, ordenes e inventario</h2>
+          </div>
+          <button id="loginButton" type="button">Entrar demo</button>
+        </header>
+
+        <section id="dashboard" class="band">
+          <h3>Dashboard</h3>
+          <div class="metrics">
+            <div>
+              <span>Ordenes abiertas</span>
+              <strong id="openOrders">0</strong>
+            </div>
+            <div>
+              <span>Bajo stock</span>
+              <strong id="lowStock">0</strong>
+            </div>
+            <div>
+              <span>Estados</span>
+              <strong id="statesCount">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid">
+          <form id="customerForm" class="panel">
+            <h3 id="cliente">Nuevo cliente</h3>
+            <label>Nombre <input name="name" required minlength="2" /></label>
+            <label>Telefono <input name="phone" required minlength="6" /></label>
+            <label>Email <input name="email" type="email" /></label>
+            <button type="submit">Guardar cliente</button>
+          </form>
+
+          <form id="vehicleForm" class="panel">
+            <h3 id="vehiculo">Nuevo vehiculo</h3>
+            <label>Cliente <select name="customerId" required></select></label>
+            <label>Patente <input name="plate" required minlength="4" /></label>
+            <label>Marca <input name="brand" required /></label>
+            <label>Modelo <input name="model" required /></label>
+            <label>Kilometraje <input name="mileage" type="number" min="0" value="0" required /></label>
+            <button type="submit">Guardar vehiculo</button>
+          </form>
+
+          <form id="orderForm" class="panel">
+            <h3 id="orden">Nueva orden</h3>
+            <label>Vehiculo <select name="vehicleId" required></select></label>
+            <label>Motivo <input name="reason" required minlength="3" /></label>
+            <label>Kilometraje <input name="mileage" type="number" min="0" required /></label>
+            <label>Prioridad
+              <select name="priority">
+                <option value="normal">Normal</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+                <option value="baja">Baja</option>
+              </select>
+            </label>
+            <button type="submit">Crear orden</button>
+          </form>
+
+          <form id="partForm" class="panel">
+            <h3 id="inventario">Nuevo repuesto</h3>
+            <label>SKU <input name="sku" required /></label>
+            <label>Nombre <input name="name" required /></label>
+            <label>Costo <input name="cost" type="number" min="0" value="0" required /></label>
+            <label>Precio <input name="price" type="number" min="0" value="0" required /></label>
+            <label>Stock <input name="stock" type="number" min="0" value="0" required /></label>
+            <label>Stock minimo <input name="minimumStock" type="number" min="0" value="0" /></label>
+            <button type="submit">Guardar repuesto</button>
+          </form>
+
+          <form id="consumeForm" class="panel">
+            <h3>Usar repuesto</h3>
+            <label>Orden <select name="workOrderId" required></select></label>
+            <label>Repuesto <select name="partId" required></select></label>
+            <label>Cantidad <input name="quantity" type="number" min="1" value="1" required /></label>
+            <button type="submit">Descontar stock</button>
+          </form>
+
+          <section id="historial" class="panel">
+            <h3>Buscar patente</h3>
+            <div class="row">
+              <input id="plateSearch" placeholder="ABCD12" />
+              <button id="searchButton" type="button">Buscar</button>
+            </div>
+            <pre id="historyOutput"></pre>
+          </section>
+        </section>
+
+        <section class="band">
+          <h3>Actividad</h3>
+          <pre id="logOutput"></pre>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

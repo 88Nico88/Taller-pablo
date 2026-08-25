@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boceto funcional - Taller Automotriz</title>
+    <style>
+      :root {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18212a;
+        background: #eef2f4;
+        --ink: #18212a;
+        --muted: #66737d;
+        --line: #d7e0e5;
+        --panel: #ffffff;
+        --blue: #0d5d7f;
+        --green: #20745a;
+        --amber: #a86410;
+        --red: #a13535;
+        --slate: #21313b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 40px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 14px;
+        background: var(--blue);
+        color: white;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #e8eef1;
+        color: var(--ink);
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        background: white;
+      }
+
+      textarea {
+        min-height: 76px;
+        resize: vertical;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 252px 1fr;
+      }
+
+      .sidebar {
+        background: var(--slate);
+        color: white;
+        padding: 22px 18px;
+        display: grid;
+        align-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 14px;
+      }
+
+      .mark {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: #f2c14e;
+        color: #1b252d;
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 23px;
+        line-height: 1.08;
+      }
+
+      h2 {
+        font-size: 24px;
+      }
+
+      h3 {
+        font-size: 17px;
+      }
+
+      .eyebrow {
+        color: #79bfd4;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      nav {
+        display: grid;
+        gap: 8px;
+      }
+
+      nav button {
+        justify-content: start;
+        text-align: left;
+        background: transparent;
+        color: #dce8ec;
+      }
+
+      nav button.active,
+      nav button:hover {
+        background: #30444f;
+      }
+
+      .main {
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .topbar {
+        min-height: 86px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        background: white;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .content {
+        padding: 22px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero-strip {
+        min-height: 160px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .overview {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .photo {
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, rgba(24, 33, 42, 0.82), rgba(24, 33, 42, 0.25)),
+          url("https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=900&q=80") center / cover;
+        color: white;
+        padding: 18px;
+        display: grid;
+        align-content: end;
+        min-height: 160px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 13px;
+        display: grid;
+        gap: 8px;
+        background: #fafcfd;
+      }
+
+      .metric span,
+      .small {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .metric strong {
+        font-size: 28px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.4fr);
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .form-grid .wide {
+        grid-column: 1 / -1;
+      }
+
+      .state-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 7px 10px;
+        border: 1px solid var(--line);
+        background: #f8fafb;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .chip.green {
+        border-color: #b8d9ca;
+        color: var(--green);
+        background: #edf8f2;
+      }
+
+      .chip.amber {
+        border-color: #e8cfad;
+        color: var(--amber);
+        background: #fff7e9;
+      }
+
+      .chip.red {
+        border-color: #ecc2c2;
+        color: var(--red);
+        background: #fff0f0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .event {
+        border-left: 4px solid var(--blue);
+        padding: 10px 12px;
+        background: #f8fbfc;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .speech {
+        line-height: 1.55;
+        color: #33414b;
+      }
+
+      .screen {
+        display: none;
+      }
+
+      .screen.active {
+        display: grid;
+        gap: 18px;
+      }
+
+      @media (max-width: 980px) {
+        .shell,
+        .hero-strip,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sidebar {
+          align-content: start;
+        }
+
+        nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 620px) {
+        .content,
+        .topbar {
+          padding: 14px;
+        }
+
+        .topbar,
+        .top-actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .metrics,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="mark">T</div>
+          <div>
+            <p class="eyebrow">Boceto funcional</p>
+            <h1>Sistema de Taller Automotriz</h1>
+          </div>
+          <nav id="nav">
+            <button class="active" data-screen="operacion">Operacion</button>
+            <button data-screen="ordenes">Ordenes</button>
+            <button data-screen="inventario">Inventario</button>
+            <button data-screen="historial">Historial</button>
+            <button data-screen="speech">Speech</button>
+          </nav>
+        </div>
+        <p class="small">Demo navegable con datos locales. No requiere backend.</p>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">MVP para piloto real</p>
+            <h2 id="screenTitle">Operacion diaria del taller</h2>
+          </div>
+          <div class="top-actions">
+            <input id="globalSearch" placeholder="Buscar patente, cliente o repuesto" />
+            <button id="quickSearch" type="button">Buscar</button>
+          </div>
+        </header>
+
+        <section class="content">
+          <section id="operacion" class="screen active">
+            <div class="hero-strip">
+              <div class="overview">
+                <div>
+                  <p class="eyebrow">Estado del taller</p>
+                  <h3>Vehiculos, ordenes y stock en una sola vista</h3>
+                </div>
+                <div class="metrics">
+                  <div class="metric"><span>En taller</span><strong id="metricVehicles">0</strong></div>
+                  <div class="metric"><span>Diagnostico</span><strong id="metricDiag">0</strong></div>
+                  <div class="metric"><span>Aprobacion</span><strong id="metricApproval">0</strong></div>
+                  <div class="metric"><span>Bajo stock</span><strong id="metricLow">0</strong></div>
+                </div>
+              </div>
+              <div class="photo">
+                <p class="eyebrow">Uso desde celular</p>
+                <h3>El mecanico registra evidencia junto al vehiculo.</h3>
+              </div>
+            </div>
+
+            <div class="layout">
+              <form id="intakeForm" class="panel">
+                <h3>Ingreso rapido</h3>
+                <div class="form-grid">
+                  <label>Cliente <input name="customer" required value="Juan Perez" /></label>
+                  <label>Telefono <input name="phone" required value="+56 9 5555 5555" /></label>
+                  <label>Patente <input name="plate" required value="KJRT22" /></label>
+                  <label>Vehiculo <input name="vehicle" required value="Toyota Yaris 2018" /></label>
+                  <label>Kilometraje <input name="mileage" type="number" min="0" required value="91200" /></label>
+                  <label>Prioridad
+                    <select name="priority">
+                      <option>Normal</option>
+                      <option>Alta</option>
+                      <option>Urgente</option>
+                    </select>
+                  </label>
+                  <label class="wide">Motivo de ingreso <textarea name="reason">Ruido al frenar y vibracion al pisar pedal.</textarea></label>
+                </div>
+                <button type="submit">Crear orden demo</button>
+              </form>
+
+              <section class="panel">
+                <h3>Ordenes activas</h3>
+                <div class="state-row">
+                  <span class="chip green">Recibido</span>
+                  <span class="chip amber">Esperando aprobacion</span>
+                  <span class="chip">En reparacion</span>
+                  <span class="chip red">Detenido</span>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>Patente</th><th>Cliente</th><th>Estado</th><th>Motivo</th></tr>
+                  </thead>
+                  <tbody id="ordersTable"></tbody>
+                </table>
+              </section>
+            </div>
+          </section>
+
+          <section id="ordenes" class="screen">
+            <div class="layout">
+              <form id="inspectionForm" class="panel">
+                <h3>Inspeccion por partes</h3>
+                <label>Orden <select name="orderId" id="inspectionOrder"></select></label>
+                <label>Sistema
+                  <select name="system">
+                    <option>Motor</option>
+                    <option>Frenos</option>
+                    <option>Suspension</option>
+                    <option>Direccion</option>
+                    <option>Neumaticos</option>
+                    <option>Electrico</option>
+                  </select>
+                </label>
+                <label>Elemento <input name="element" value="Pastillas delanteras" /></label>
+                <label>Estado
+                  <select name="state">
+                    <option>Bueno</option>
+                    <option>Requiere atencion</option>
+                    <option>Requiere reparacion</option>
+                    <option>No revisado</option>
+                  </select>
+                </label>
+                <label>Comentario <textarea name="comment">Desgaste avanzado, se recomienda cambio.</textarea></label>
+                <button type="submit">Agregar inspeccion</button>
+              </form>
+
+              <section class="panel">
+                <h3>Detalle tecnico</h3>
+                <div id="inspectionList" class="timeline"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="inventario" class="screen">
+            <div class="layout">
+              <form id="stockForm" class="panel">
+                <h3>Consumir repuesto</h3>
+                <label>Orden <select name="orderId" id="stockOrder"></select></label>
+                <label>Repuesto <select name="partId" id="partSelect"></select></label>
+                <label>Cantidad <input name="quantity" type="number" min="1" value="1" /></label>
+                <button type="submit">Descontar del inventario</button>
+              </form>
+
+              <section class="panel">
+                <h3>Stock disponible</h3>
+                <table>
+                  <thead>
+                    <tr><th>SKU</th><th>Repuesto</th><th>Stock</th><th>Minimo</th></tr>
+                  </thead>
+                  <tbody id="partsTable"></tbody>
+                </table>
+              </section>
+            </div>
+          </section>
+
+          <section id="historial" class="screen">
+            <section class="panel">
+              <h3>Historial por patente</h3>
+              <div id="historyList" class="timeline"></div>
+            </section>
+          </section>
+
+          <section id="speech" class="screen">
+            <section class="panel">
+              <h3>Speech corto para presentar</h3>
+              <p class="speech">
+                Este proyecto es un sistema de gestion para talleres automotrices. La idea es que cada vehiculo tenga una ficha completa por patente, donde se vea el cliente, el historial, las ordenes de trabajo, las inspecciones, los repuestos utilizados, fotos y presupuestos. El valor principal es ordenar la operacion diaria del taller: recepcion sabe que autos estan dentro, el mecanico puede actualizar desde el celular junto al vehiculo, y el dueno puede ver estados, stock y trabajos pendientes sin depender de papel, WhatsApp o memoria del personal.
+              </p>
+              <p class="speech">
+                La primera version no intenta hacer todo de una vez. Se enfoca en el flujo mas importante: registrar cliente, asociar vehiculo, crear orden, inspeccionar, presupuestar, descontar repuestos, cerrar el trabajo y luego recuperar toda la historia buscando la patente. Despues se pueden sumar agenda, WhatsApp, facturacion, portal del cliente y reportes avanzados.
+              </p>
+            </section>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const state = {
+        orders: [
+          { id: "ot-1001", plate: "KJRT22", customer: "Juan Perez", vehicle: "Toyota Yaris 2018", state: "En diagnostico", reason: "Ruido al frenar", mileage: 91200, inspections: [] },
+          { id: "ot-1002", plate: "HLPP38", customer: "Camila Soto", vehicle: "Kia Rio 2020", state: "Esperando aprobacion", reason: "Mantencion 80.000 km", mileage: 80340, inspections: [{ system: "Motor", element: "Aceite", state: "Requiere atencion", comment: "Cambio recomendado por kilometraje." }] },
+          { id: "ot-1003", plate: "PXCV91", customer: "Taller Demo SpA", vehicle: "Nissan NP300 2019", state: "En reparacion", reason: "Fuga de refrigerante", mileage: 132500, inspections: [] }
+        ],
+        parts: [
+          { id: "p1", sku: "PAST-DEL", name: "Pastillas delanteras", stock: 4, min: 2 },
+          { id: "p2", sku: "FILT-ACE", name: "Filtro de aceite", stock: 1, min: 3 },
+          { id: "p3", sku: "ACE-5W30", name: "Aceite 5W30", stock: 12, min: 6 }
+        ]
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+      function render() {
+        $("#ordersTable").innerHTML = state.orders.map(order => `
+          <tr>
+            <td><strong>${order.plate}</strong><br><span class="small">${order.vehicle}</span></td>
+            <td>${order.customer}</td>
+            <td><span class="chip ${order.state.includes("aprobacion") ? "amber" : order.state.includes("diagnostico") ? "green" : ""}">${order.state}</span></td>
+            <td>${order.reason}</td>
+          </tr>
+        `).join("");
+
+        $("#inspectionOrder").innerHTML = state.orders.map(order => `<option value="${order.id}">${order.plate} - ${order.reason}</option>`).join("");
+        $("#stockOrder").innerHTML = $("#inspectionOrder").innerHTML;
+        $("#partSelect").innerHTML = state.parts.map(part => `<option value="${part.id}">${part.sku} - ${part.name} (${part.stock})</option>`).join("");
+
+        $("#partsTable").innerHTML = state.parts.map(part => `
+          <tr>
+            <td>${part.sku}</td>
+            <td>${part.name}</td>
+            <td><strong>${part.stock}</strong></td>
+            <td>${part.min}</td>
+          </tr>
+        `).join("");
+
+        const selectedOrder = state.orders[0];
+        $("#inspectionList").innerHTML = state.orders.flatMap(order => order.inspections.map(item => `
+          <div class="event">
+            <strong>${order.plate} - ${item.system}: ${item.element}</strong>
+            <p>${item.state}. ${item.comment}</p>
+          </div>
+        `)).join("") || '<p class="small">Sin inspecciones registradas todavia.</p>';
+
+        $("#historyList").innerHTML = state.orders.map(order => `
+          <div class="event">
+            <strong>${order.plate} - ${order.vehicle}</strong>
+            <p>${order.customer} | ${order.mileage.toLocaleString("es-CL")} km | ${order.state}</p>
+            <p>${order.reason}</p>
+            <p class="small">${order.inspections.length} inspecciones registradas</p>
+          </div>
+        `).join("");
+
+        $("#metricVehicles").textContent = state.orders.length;
+        $("#metricDiag").textContent = state.orders.filter(order => order.state === "En diagnostico").length;
+        $("#metricApproval").textContent = state.orders.filter(order => order.state === "Esperando aprobacion").length;
+        $("#metricLow").textContent = state.parts.filter(part => part.stock <= part.min).length;
+      }
+
+      $("#nav").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-screen]");
+        if (!button) return;
+        $$("#nav button").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        $$(".screen").forEach(screen => screen.classList.remove("active"));
+        $(`#${button.dataset.screen}`).classList.add("active");
+        $("#screenTitle").textContent = button.textContent === "Speech" ? "Presentacion del proyecto" : `${button.textContent} del taller`;
+      });
+
+      $("#intakeForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+        state.orders.unshift({
+          id: `ot-${1000 + state.orders.length + 1}`,
+          plate: data.plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+          customer: data.customer,
+          vehicle: data.vehicle,
+          state: "Recibido",
+          reason: data.reason,
+          mileage: Number(data.mileage),
+          inspections: []
+        });
+        render();
+      });
+
+      $("#inspectionForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+        const order = state.orders.find(item => item.id === data.orderId);
+        order.inspections.push({ system: data.system, element: data.element, state: data.state, comment: data.comment });
+        order.state = data.state === "Requiere reparacion" ? "Esperando aprobacion" : order.state;
+        render();
+      });
+
+      $("#stockForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+        const part = state.parts.find(item => item.id === data.partId);
+        const qty = Number(data.quantity);
+        if (part.stock < qty) {
+          alert("No hay stock suficiente. El sistema bloquea el consumo para no descuadrar inventario.");
+          return;
+        }
+        part.stock -= qty;
+        render();
+      });
+
+      $("#quickSearch").addEventListener("click", () => {
+        const query = $("#globalSearch").value.trim().toUpperCase();
+        const found = state.orders.find(order => [order.plate, order.customer.toUpperCase(), order.vehicle.toUpperCase()].some(value => value.includes(query)));
+        if (!found) {
+          alert("No encontrado en el boceto.");
+          return;
+        }
+        $$("#nav button").find(button => button.dataset.screen === "historial").click();
+        $("#historyList").innerHTML = `
+          <div class="event">
+            <strong>${found.plate} - ${found.vehicle}</strong>
+            <p>${found.customer} | ${found.mileage.toLocaleString("es-CL")} km | ${found.state}</p>
+            <p>${found.reason}</p>
+            <p class="small">${found.inspections.length} inspecciones registradas</p>
+          </div>
+        `;
+      });
+
+      render();
+    </script>
+  </body>
+</html>
