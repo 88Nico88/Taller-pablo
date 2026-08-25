@@ -46,6 +46,8 @@ export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard");
   const [token, setToken] = useState("");
   const [session, setSession] = useState("Sin sesion");
+  const [authForm, setAuthForm] = useState({ email: "admin@taller.local", password: "admin12345" });
+  const [authError, setAuthError] = useState("");
   const [forms, setForms] = useState(initialForm);
   const [data, setData] = useState({ customers: [], vehicles: [], workOrders: [], parts: [] });
   const [summary, setSummary] = useState({ openWorkOrders: 0, lowStockCount: 0, workOrdersByState: {} });
@@ -167,14 +169,20 @@ export default function HomePage() {
     setSummary(dashboard.data);
   }
 
-  async function login() {
+  async function login(event) {
+    event?.preventDefault?.();
+    setAuthError("");
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "admin@taller.local", password: "admin12345" })
+      body: JSON.stringify(authForm)
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error?.message || "Login failed");
+    if (!response.ok) {
+      const message = body.error?.message || "Login failed";
+      setAuthError(message);
+      throw new Error(message);
+    }
     localStorage.setItem("token", body.token);
     setToken(body.token);
     setSession(`${body.user.name} (${body.user.role})`);
@@ -393,8 +401,49 @@ export default function HomePage() {
       });
       return;
     }
-    login().catch((error) => addLog(`Error login: ${error.message}`));
   }, []);
+
+  if (!token) {
+    return (
+      <main className="auth-screen">
+        <section className="auth-hero">
+          <div className="brand auth-brand">
+            <div className="brand-mark">TP</div>
+            <div>
+              <strong>Taller Pablo</strong>
+              <span>Vehiculos, ordenes y repuestos</span>
+            </div>
+          </div>
+          <h1>Control de taller con historial por patente.</h1>
+          <p>Recepcion de vehiculos, ordenes de trabajo, repuestos usados, alertas de stock y respaldo operativo en una app privada.</p>
+          <div className="auth-proof">
+            <span>Vehiculos</span>
+            <span>Ordenes</span>
+            <span>Repuestos</span>
+          </div>
+        </section>
+
+        <section className="auth-card">
+          <div className="auth-card-head">
+            <span className="mode-pill">Acceso privado</span>
+            <h2>Entrar a Taller Pablo</h2>
+            <p>Usa la cuenta asignada para operar el mostrador.</p>
+          </div>
+          <form className="auth-form active" onSubmit={login}>
+            <label>Correo<input type="email" value={authForm.email} onChange={(event) => setAuthForm((current) => ({ ...current, email: event.target.value }))} required /></label>
+            <label>Contrasena<input type="password" value={authForm.password} onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))} required minLength={8} /></label>
+            {authError ? <div className="auth-error">{authError}</div> : null}
+            <button className="primary-button full" type="submit">Iniciar sesion</button>
+            <button className="ghost-button full" type="button" onClick={() => login().catch((error) => setAuthError(error.message))}>Entrar demo</button>
+          </form>
+          <div className="auth-footer">
+            <span>Demo aislada de FlowStock</span>
+            <strong>Sin datos reales</strong>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">
