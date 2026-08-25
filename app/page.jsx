@@ -224,134 +224,123 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-main">
-          <div>
-            <p className="eyebrow">Operacion</p>
-            <h1>Taller Automotriz Pablo</h1>
-          </div>
-          <nav>
-            <a href="#recepcion">Recepcion</a>
-            <a href="#ordenes">Ordenes</a>
-            <a href="#inventario">Inventario</a>
-            <a href="#historial">Historial</a>
-          </nav>
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">Taller Automotriz Pablo</p>
+          <h1>Mostrador de recepcion</h1>
         </div>
-        <div className="session">{session}</div>
-      </aside>
+        <div className="header-actions">
+          <span className="session">{session}</span>
+          <button type="button" className="ghost dark" onClick={fillDemoReception}>Datos demo</button>
+          <button type="button" onClick={() => login().catch((error) => addLog(`Error login: ${error.message}`))}>Entrar demo</button>
+        </div>
+      </header>
 
       <section className="workspace">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Mostrador</p>
-            <h2>Ingreso rapido de vehiculo y orden</h2>
-          </div>
-          <div className="top-actions">
-            <button type="button" className="ghost" onClick={fillDemoReception}>Datos demo</button>
-            <button type="button" onClick={() => login().catch((error) => addLog(`Error login: ${error.message}`))}>Entrar demo</button>
-          </div>
-        </header>
-
-        <section id="dashboard" className="metrics strip">
-          <div>
-            <span>Ordenes abiertas</span>
-            <strong>{summary.openWorkOrders}</strong>
-          </div>
-          <div>
-            <span>Vehiculos ingresados</span>
-            <strong>{data.vehicles.length}</strong>
-          </div>
-          <div>
-            <span>Bajo stock</span>
-            <strong>{summary.lowStockCount}</strong>
-          </div>
-          <div>
-            <span>Estados activos</span>
-            <strong>{stateCount}</strong>
-          </div>
-        </section>
-
-        <section className="workbench">
-          <form id="recepcion" className="panel hero-panel" onSubmit={submitQuickReception}>
-            <div className="panel-title">
+        <section className="desk-layout">
+          <form id="recepcion" className="intake-card" onSubmit={submitQuickReception}>
+            <div className="section-head">
               <div>
-                <p className="eyebrow">Paso unico</p>
-                <h3>Recepcion rapida</h3>
+                <p className="eyebrow">Recepcion rapida</p>
+                <h2>Crear ingreso en un solo paso</h2>
               </div>
-              <span className="badge">Cliente + auto + orden</span>
+              <span className="badge">Cliente + vehiculo + orden</span>
             </div>
 
-            <div className="quick-grid">
-              <label>Cliente
-                <input value={forms.quick.customerName} onChange={(event) => updateForm("quick", "customerName", event.target.value)} placeholder="Nombre del cliente" required minLength={2} />
-              </label>
-              <label>Telefono
-                <input value={forms.quick.phone} onChange={(event) => updateForm("quick", "phone", event.target.value)} placeholder="WhatsApp" required minLength={6} />
-              </label>
-              <label>Patente
-                <input className="plate-input" value={forms.quick.plate} onChange={(event) => updateForm("quick", "plate", event.target.value.toUpperCase())} placeholder="ABCD12" required minLength={4} maxLength={10} />
-              </label>
-              <label>Kilometraje
-                <input value={forms.quick.mileage} onChange={(event) => updateForm("quick", "mileage", Number(event.target.value))} type="number" min="0" required />
-              </label>
-              <label>Marca
-                <input value={forms.quick.brand} onChange={(event) => updateForm("quick", "brand", event.target.value)} placeholder="Toyota" required minLength={2} />
-              </label>
-              <label>Modelo
-                <input value={forms.quick.model} onChange={(event) => updateForm("quick", "model", event.target.value)} placeholder="Yaris" required />
-              </label>
+            <div className="form-block">
+              <h3>1. Cliente</h3>
+              <div className="field-grid two">
+                <label>Nombre
+                  <input value={forms.quick.customerName} onChange={(event) => updateForm("quick", "customerName", event.target.value)} placeholder="Nombre del cliente" required minLength={2} />
+                </label>
+                <label>Telefono / WhatsApp
+                  <input value={forms.quick.phone} onChange={(event) => updateForm("quick", "phone", event.target.value)} placeholder="+569..." required minLength={6} />
+                </label>
+              </div>
             </div>
 
-            <div className="chips" aria-label="Modelos frecuentes">
-              {vehiclePresets.map((preset) => <button key={`${preset.brand}-${preset.model}`} type="button" className="chip" onClick={() => applyVehiclePreset(preset)}>{preset.brand} {preset.model}</button>)}
+            <div className="form-block">
+              <h3>2. Vehiculo</h3>
+              <div className="field-grid four">
+                <label>Patente
+                  <input className="plate-input" value={forms.quick.plate} onChange={(event) => updateForm("quick", "plate", event.target.value.toUpperCase())} placeholder="ABCD12" required minLength={4} maxLength={10} />
+                </label>
+                <label>Marca
+                  <input value={forms.quick.brand} onChange={(event) => updateForm("quick", "brand", event.target.value)} placeholder="Toyota" required minLength={2} />
+                </label>
+                <label>Modelo
+                  <input value={forms.quick.model} onChange={(event) => updateForm("quick", "model", event.target.value)} placeholder="Yaris" required />
+                </label>
+                <label>Kilometraje
+                  <input value={forms.quick.mileage} onChange={(event) => updateForm("quick", "mileage", Number(event.target.value))} type="number" min="0" required />
+                </label>
+              </div>
+              <div className="chips" aria-label="Modelos frecuentes">
+                {vehiclePresets.map((preset) => <button key={`${preset.brand}-${preset.model}`} type="button" className="chip" onClick={() => applyVehiclePreset(preset)}>{preset.brand} {preset.model}</button>)}
+              </div>
             </div>
 
-            <div className="quick-grid order-row">
-              <label>Trabajo solicitado
-                <input value={forms.quick.reason} onChange={(event) => updateForm("quick", "reason", event.target.value)} list="service-presets" required minLength={3} />
-                <datalist id="service-presets">
-                  {servicePresets.map((preset) => <option key={preset} value={preset} />)}
-                </datalist>
-              </label>
-              <label>Prioridad
-                <select value={forms.quick.priority} onChange={(event) => updateForm("quick", "priority", event.target.value)}>
-                  <option value="normal">Normal</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                  <option value="baja">Baja</option>
-                </select>
-              </label>
+            <div className="form-block">
+              <h3>3. Trabajo</h3>
+              <div className="field-grid service">
+                <label>Motivo
+                  <input value={forms.quick.reason} onChange={(event) => updateForm("quick", "reason", event.target.value)} list="service-presets" required minLength={3} />
+                  <datalist id="service-presets">
+                    {servicePresets.map((preset) => <option key={preset} value={preset} />)}
+                  </datalist>
+                </label>
+                <label>Prioridad
+                  <select value={forms.quick.priority} onChange={(event) => updateForm("quick", "priority", event.target.value)}>
+                    <option value="normal">Normal</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
-            <button type="submit" className="primary-action" disabled={busy}>{busy ? "Ingresando..." : "Ingresar vehiculo y crear orden"}</button>
+            <button type="submit" className="primary-action" disabled={busy}>{busy ? "Ingresando..." : "Ingresar vehiculo y abrir orden"}</button>
           </form>
 
-          <section id="ordenes" className="panel compact-panel">
-            <div className="panel-title">
-              <div>
-                <p className="eyebrow">Cola</p>
-                <h3>Ultimas ordenes</h3>
+          <aside className="side-stack">
+            <section className="summary-card">
+              <p className="eyebrow">Hoy</p>
+              <div className="summary-grid">
+                <div><strong>{summary.openWorkOrders}</strong><span>abiertas</span></div>
+                <div><strong>{data.vehicles.length}</strong><span>vehiculos</span></div>
+                <div><strong>{summary.lowStockCount}</strong><span>bajo stock</span></div>
+                <div><strong>{stateCount}</strong><span>estados</span></div>
               </div>
-            </div>
-            <div className="order-list">
-              {latestOrders.length === 0 ? <p className="empty">Sin ordenes aun.</p> : latestOrders.map((order) => {
-                const vehicle = data.vehicles.find((item) => item.id === order.vehicleId);
-                return (
-                  <div className="order-item" key={order.id}>
-                    <strong>{vehicle?.plate || order.id.slice(0, 8)}</strong>
-                    <span>{order.reason}</span>
-                    <em>{order.state} / {order.priority}</em>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+            </section>
+
+            <section id="ordenes" className="queue-card">
+              <div className="section-head small">
+                <div>
+                  <p className="eyebrow">Cola</p>
+                  <h3>Ultimas ordenes</h3>
+                </div>
+              </div>
+              <div className="order-list">
+                {latestOrders.length === 0 ? <p className="empty">Sin ordenes aun.</p> : latestOrders.map((order) => {
+                  const vehicle = data.vehicles.find((item) => item.id === order.vehicleId);
+                  return (
+                    <div className="order-item" key={order.id}>
+                      <strong>{vehicle?.plate || order.id.slice(0, 8)}</strong>
+                      <span>{order.reason}</span>
+                      <em>{order.state} / {order.priority}</em>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </aside>
         </section>
 
-        <section className="tools-grid">
-          <form id="inventario" className="panel" onSubmit={(event) => submit("part", "/parts", event)}>
+        <section className="secondary-layout">
+          <form id="inventario" className="module-card" onSubmit={(event) => submit("part", "/parts", event)}>
             <h3>Inventario rapido</h3>
-            <div className="mini-grid">
+            <div className="field-grid two compact">
               <label>SKU <input value={forms.part.sku} onChange={(event) => updateForm("part", "sku", event.target.value)} required /></label>
               <label>Repuesto <input value={forms.part.name} onChange={(event) => updateForm("part", "name", event.target.value)} required /></label>
               <label>Precio <input value={forms.part.price} onChange={(event) => updateForm("part", "price", Number(event.target.value))} type="number" min="0" required /></label>
@@ -362,7 +351,7 @@ export default function HomePage() {
             <button type="submit">Guardar repuesto</button>
           </form>
 
-          <form className="panel" onSubmit={consumePart}>
+          <form className="module-card" onSubmit={consumePart}>
             <h3>Descontar stock</h3>
             <label>Orden <select value={forms.consume.workOrderId} onChange={(event) => updateForm("consume", "workOrderId", event.target.value)} required>
               <option value="">Seleccionar</option>
@@ -376,7 +365,7 @@ export default function HomePage() {
             <button type="submit">Descontar</button>
           </form>
 
-          <section id="historial" className="panel">
+          <section id="historial" className="module-card">
             <h3>Historial por patente</h3>
             <div className="row">
               <input className="plate-input" value={plateSearch} onChange={(event) => setPlateSearch(event.target.value.toUpperCase())} placeholder="ABCD12" />
@@ -386,7 +375,7 @@ export default function HomePage() {
           </section>
         </section>
 
-        <section className="band">
+        <section className="activity-log">
           <h3>Actividad</h3>
           <pre>{log.join("\n\n")}</pre>
         </section>
