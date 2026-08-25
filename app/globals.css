@@ -234,6 +234,32 @@ label {
   overflow-y: auto;
 }
 
+.area-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.area-switcher button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #dbe7e3;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.area-switcher button.active,
+.area-switcher button:hover {
+  background: white;
+  color: #101828;
+}
+
 .nav-group-label {
   margin: 10px 8px 2px;
   color: #92a4b3;
@@ -338,6 +364,10 @@ label {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.business-grid.single {
+  grid-template-columns: 1fr;
 }
 
 .business-card {

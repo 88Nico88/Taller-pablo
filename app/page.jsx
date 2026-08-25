@@ -27,6 +27,7 @@ const vehiclePresets = [
 
 const views = {
   dashboard: "Panel",
+  partsDashboard: "Panel repuestos",
   reception: "Recepcion",
   vehicles: "Vehiculos",
   orders: "Ordenes",
@@ -43,6 +44,7 @@ const money = (value) =>
   new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value) || 0);
 
 export default function HomePage() {
+  const [activeArea, setActiveArea] = useState("workshop");
   const [activeView, setActiveView] = useState("dashboard");
   const [token, setToken] = useState("");
   const [session, setSession] = useState("Sin sesion");
@@ -389,6 +391,11 @@ export default function HomePage() {
     showToast("Sesion cerrada");
   }
 
+  function switchArea(area) {
+    setActiveArea(area);
+    setActiveView(area === "workshop" ? "dashboard" : "partsDashboard");
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem("token");
     if (saved) {
@@ -451,25 +458,36 @@ export default function HomePage() {
         <div className="brand">
           <div className="brand-mark">TP</div>
           <div>
-            <strong>Taller Pablo</strong>
-            <span>Recepcion e inventario</span>
+            <strong>{activeArea === "workshop" ? "Taller Pablo" : "FlowStock Repuestos"}</strong>
+            <span>{activeArea === "workshop" ? "Recepcion y ordenes" : "Stock y venta de repuestos"}</span>
           </div>
         </div>
 
+        <div className="area-switcher">
+          <button className={activeArea === "workshop" ? "active" : ""} type="button" onClick={() => switchArea("workshop")}>Taller</button>
+          <button className={activeArea === "parts" ? "active" : ""} type="button" onClick={() => switchArea("parts")}>Repuestos</button>
+        </div>
+
         <nav className="nav" aria-label="Principal">
-          <button className={`nav-item ${activeView === "dashboard" ? "active" : ""}`} type="button" onClick={() => setActiveView("dashboard")}>Panel</button>
-          <span className="nav-group-label">Taller / recepcion</span>
-          {["reception", "vehicles", "orders", "history", "closeout"].map((id) => (
-            <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
-              {views[id]}
-            </button>
-          ))}
-          <span className="nav-group-label">Repuestos / stock</span>
-          {["inventory", "backup"].map((id) => (
-            <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
-              {views[id]}
-            </button>
-          ))}
+          {activeArea === "workshop" ? (
+            <>
+              <span className="nav-group-label">Taller / recepcion</span>
+              {["dashboard", "reception", "vehicles", "orders", "history", "closeout"].map((id) => (
+                <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
+                  {views[id]}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <span className="nav-group-label">FlowStock Repuestos</span>
+              {["partsDashboard", "inventory", "backup"].map((id) => (
+                <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
+                  {views[id]}
+                </button>
+              ))}
+            </>
+          )}
           <span className="nav-group-label">Sistema</span>
           <button className={`nav-item ${activeView === "account" ? "active" : ""}`} type="button" onClick={() => setActiveView("account")}>Cuenta</button>
         </nav>
@@ -487,7 +505,7 @@ export default function HomePage() {
         <header className="topbar">
           <div>
             <p className="eyebrow">{new Date().toLocaleDateString("es-CL", { weekday: "long", day: "2-digit", month: "long" })}</p>
-            <h1>{views[activeView]}</h1>
+            <h1>{activeArea === "workshop" ? "Taller Pablo" : "FlowStock Repuestos"} / {views[activeView]}</h1>
           </div>
           <div className="topbar-actions">
             <span className="sync-pill">Demo local</span>
@@ -567,6 +585,42 @@ export default function HomePage() {
               <button className="ghost-button" type="button" onClick={() => setActiveView("vehicles")}>Ver todos</button>
             </div>
             {renderVehiclesTable(data.vehicles.slice(0, 6))}
+          </section>
+        </section>
+
+        <section className={`view ${activeView === "partsDashboard" ? "active" : ""}`}>
+          <div className="business-grid single">
+            <article className="business-card parts-card">
+              <div>
+                <p className="eyebrow">FlowStock Repuestos</p>
+                <h2>Negocio de stock separado del taller</h2>
+                <p>Este espacio replica el enfoque FlowStock para repuestos: productos, stock critico, valor de inventario, respaldo y pedido sugerido.</p>
+              </div>
+              <div className="business-actions">
+                <button className="primary-button" type="button" onClick={() => setActiveView("inventory")}>Gestionar repuestos</button>
+                <button className="ghost-button" type="button" onClick={sendLowStockWhatsapp}>Pedido stock</button>
+              </div>
+            </article>
+          </div>
+          <div className="metrics-grid">
+            <article className="metric"><span>Repuestos</span><strong>{data.parts.length}</strong></article>
+            <article className="metric"><span>Valor stock</span><strong>{money(inventoryValue)}</strong></article>
+            <article className="metric warning"><span>Stock critico</span><strong>{summary.lowStockCount}</strong></article>
+            <article className="metric"><span>Respaldos</span><strong>JSON</strong></article>
+          </div>
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Alertas FlowStock Repuestos</h2>
+              <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Ver repuestos</button>
+            </div>
+            <div className="list">
+              {lowStockParts.length === 0 ? <div className="empty-state">Sin repuestos bajo stock.</div> : lowStockParts.map((part) => (
+                <div className="list-item" key={part.id}>
+                  <strong>{part.name}</strong>
+                  <span>{part.sku} / stock {part.stock} / minimo {part.minimumStock}</span>
+                </div>
+              ))}
+            </div>
           </section>
         </section>
 
