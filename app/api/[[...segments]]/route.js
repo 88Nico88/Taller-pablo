@@ -63,6 +63,10 @@ const createPartSchema = z.object({
   location: optionalText
 });
 const consumePartSchema = z.object({ partId: z.uuid(), quantity: z.number().int().positive() });
+const createPartSaleSchema = z.object({
+  paymentMethod: z.enum(["Efectivo", "Transferencia", "Transbank"]).default("Efectivo"),
+  items: z.array(z.object({ partId: z.uuid(), quantity: z.number().int().positive() })).min(1)
+});
 
 function segments(params) {
   return params?.segments || [];
@@ -156,6 +160,11 @@ async function dispatch(request, params) {
 
   if (method === "GET" && path.join("/") === "parts") return json({ data: await store.listParts() });
   if (method === "POST" && path.join("/") === "parts") return json({ data: await store.createPart(await readBody(request, createPartSchema)) }, { status: 201 });
+  if (method === "GET" && path.join("/") === "part-sales") return json({ data: await store.listPartSales() });
+  if (method === "POST" && path.join("/") === "part-sales") {
+    const input = await readBody(request, createPartSaleSchema);
+    return json({ data: await store.createPartSale(input, user.id) }, { status: 201 });
+  }
   if (method === "GET" && path.join("/") === "dashboard/summary") return json({ data: await store.dashboardSummary() });
 
   throw requestError("Ruta no encontrada", 404);

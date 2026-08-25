@@ -32,6 +32,7 @@ const views = {
   vehicles: "Vehiculos",
   orders: "Ordenes",
   inventory: "Repuestos",
+  partsSales: "Venta",
   history: "Historial",
   closeout: "Cierre",
   backup: "Respaldo",
@@ -51,7 +52,7 @@ export default function HomePage() {
   const [authForm, setAuthForm] = useState({ email: "admin@taller.local", password: "admin12345" });
   const [authError, setAuthError] = useState("");
   const [forms, setForms] = useState(initialForm);
-  const [data, setData] = useState({ customers: [], vehicles: [], workOrders: [], parts: [] });
+  const [data, setData] = useState({ customers: [], vehicles: [], workOrders: [], parts: [], partSales: [] });
   const [summary, setSummary] = useState({ openWorkOrders: 0, lowStockCount: 0, workOrdersByState: {} });
   const [log, setLog] = useState([]);
   const [plateSearch, setPlateSearch] = useState("");
@@ -59,6 +60,9 @@ export default function HomePage() {
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [partSearch, setPartSearch] = useState("");
+  const [saleCode, setSaleCode] = useState("");
+  const [partsCart, setPartsCart] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -68,6 +72,10 @@ export default function HomePage() {
   const inventoryValue = useMemo(() => data.parts.reduce((total, part) => total + Number(part.stock || 0) * Number(part.cost || 0), 0), [data.parts]);
   const finishedOrders = useMemo(() => data.workOrders.filter((order) => ["listo", "entregado"].includes(order.state)).length, [data.workOrders]);
   const activeVehicles = useMemo(() => new Set(data.workOrders.filter((order) => !["entregado", "detenido"].includes(order.state)).map((order) => order.vehicleId)).size, [data.workOrders]);
+  const cartTotal = useMemo(() => partsCart.reduce((total, item) => total + Number(item.price || 0) * item.quantity, 0), [partsCart]);
+  const cartUnits = useMemo(() => partsCart.reduce((total, item) => total + item.quantity, 0), [partsCart]);
+  const partsSalesTotal = useMemo(() => data.partSales.reduce((total, sale) => total + Number(sale.total || 0), 0), [data.partSales]);
+  const partsSalesProfit = useMemo(() => data.partSales.reduce((total, sale) => total + Number(sale.profit || 0), 0), [data.partSales]);
 
   const filteredVehicles = useMemo(() => {
     const term = vehicleSearch.trim().toLowerCase();
@@ -155,18 +163,20 @@ export default function HomePage() {
         return body;
       });
 
-    const [customers, vehicles, workOrders, parts, dashboard] = await Promise.all([
+    const [customers, vehicles, workOrders, parts, partSales, dashboard] = await Promise.all([
       request("/customers"),
       request("/vehicles"),
       request("/work-orders"),
       request("/parts"),
+      request("/part-sales"),
       request("/dashboard/summary")
     ]);
     setData({
       customers: customers.data,
       vehicles: vehicles.data,
       workOrders: workOrders.data,
-      parts: parts.data
+      parts: parts.data,
+      partSales: partSales.data
     });
     setSummary(dashboard.data);
   }
@@ -314,6 +324,58 @@ export default function HomePage() {
     }
   }
 
+  function addPartToCart(part, quantity = 1) {
+    if (!part) {
+      showToast("Repuesto no encontrado");
+      return;
+    }
+    if (part.stock <= 0) {
+      showToast("Sin stock disponible");
+      return;
+    }
+    setPartsCart((current) => {
+      const existing = current.find((item) => item.partId === part.id);
+      if (existing) {
+        return current.map((item) => item.partId === part.id ? { ...item, quantity: Math.min(item.quantity + quantity, part.stock) } : item);
+      }
+      return [...current, { partId: part.id, sku: part.sku, name: part.name, price: part.price, stock: part.stock, quantity }];
+    });
+  }
+
+  function addPartByCode() {
+    const code = saleCode.trim().toLowerCase();
+    if (!code) return;
+    const part = data.parts.find((item) => item.sku.toLowerCase() === code);
+    addPartToCart(part);
+    setSaleCode("");
+  }
+
+  function updateCartQuantity(partId, quantity) {
+    if (quantity <= 0) {
+      setPartsCart((current) => current.filter((item) => item.partId !== partId));
+      return;
+    }
+    const part = data.parts.find((item) => item.id === partId);
+    setPartsCart((current) => current.map((item) => item.partId === partId ? { ...item, quantity: Math.min(quantity, part?.stock || quantity) } : item));
+  }
+
+  async function registerPartSale() {
+    try {
+      const sale = await api("/part-sales", {
+        method: "POST",
+        body: JSON.stringify({
+          paymentMethod,
+          items: partsCart.map((item) => ({ partId: item.partId, quantity: item.quantity }))
+        })
+      });
+      setPartsCart([]);
+      addLog("Venta de repuestos registrada", sale.data);
+      await refresh();
+    } catch (error) {
+      addLog(`Error venta: ${error.message}`);
+    }
+  }
+
   async function consumePart(event) {
     event.preventDefault();
     try {
@@ -359,6 +421,7 @@ export default function HomePage() {
       vehicles: data.vehicles,
       workOrders: data.workOrders,
       parts: data.parts,
+      partSales: data.partSales,
       summary
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -386,7 +449,7 @@ export default function HomePage() {
     localStorage.removeItem("token");
     setToken("");
     setSession("Sin sesion");
-    setData({ customers: [], vehicles: [], workOrders: [], parts: [] });
+    setData({ customers: [], vehicles: [], workOrders: [], parts: [], partSales: [] });
     setSummary({ openWorkOrders: 0, lowStockCount: 0, workOrdersByState: {} });
     showToast("Sesion cerrada");
   }
@@ -481,7 +544,7 @@ export default function HomePage() {
           ) : (
             <>
               <span className="nav-group-label">FlowStock Repuestos</span>
-              {["partsDashboard", "inventory", "backup"].map((id) => (
+              {["partsDashboard", "partsSales", "inventory", "backup"].map((id) => (
                 <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
                   {views[id]}
                 </button>
@@ -603,10 +666,10 @@ export default function HomePage() {
             </article>
           </div>
           <div className="metrics-grid">
-            <article className="metric"><span>Repuestos</span><strong>{data.parts.length}</strong></article>
-            <article className="metric"><span>Valor stock</span><strong>{money(inventoryValue)}</strong></article>
+            <article className="metric"><span>Ventas repuestos</span><strong>{money(partsSalesTotal)}</strong></article>
+            <article className="metric"><span>Ganancia aprox.</span><strong>{money(partsSalesProfit)}</strong></article>
             <article className="metric warning"><span>Stock critico</span><strong>{summary.lowStockCount}</strong></article>
-            <article className="metric"><span>Respaldos</span><strong>JSON</strong></article>
+            <article className="metric"><span>Unidades vendidas</span><strong>{data.partSales.reduce((total, sale) => total + Number(sale.units || 0), 0)}</strong></article>
           </div>
           <section className="panel">
             <div className="panel-head">
@@ -686,6 +749,61 @@ export default function HomePage() {
             </div>
             {renderVehiclesTable(filteredVehicles, true)}
           </section>
+        </section>
+
+        <section className={`view ${activeView === "partsSales" ? "active" : ""}`}>
+          <div className="sales-layout">
+            <section className="panel">
+              <div className="panel-head">
+                <h2>Venta con codigo</h2>
+                <span className="mode-pill">FlowStock Repuestos</span>
+              </div>
+              <div className="scanner-strip">
+                <input value={saleCode} onChange={(event) => setSaleCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addPartByCode(); } }} placeholder="Escanea o escribe SKU/codigo" />
+                <button type="button" onClick={addPartByCode}>Agregar</button>
+              </div>
+              <div className="panel-head inline-head">
+                <h2>Repuestos disponibles</h2>
+                <input value={partSearch} onChange={(event) => setPartSearch(event.target.value)} placeholder="Buscar repuesto" />
+              </div>
+              <div className="product-grid">
+                {filteredParts.map((part) => (
+                  <button key={part.id} className="product-card" type="button" onClick={() => addPartToCart(part)}>
+                    <strong>{part.name}</strong>
+                    <span>{part.sku}</span>
+                    <em>{money(part.price)} / stock {part.stock}</em>
+                  </button>
+                ))}
+                {filteredParts.length === 0 ? <div className="empty-state">No hay repuestos para vender.</div> : null}
+              </div>
+            </section>
+
+            <aside className="panel cart-panel">
+              <div className="panel-head">
+                <h2>Carrito</h2>
+                <button className="ghost-button" type="button" onClick={() => setPartsCart([])}>Vaciar</button>
+              </div>
+              <div className="cart-list">
+                {partsCart.length === 0 ? <div className="empty-state">Escanea un codigo o elige un repuesto.</div> : partsCart.map((item) => (
+                  <div className="cart-line" key={item.partId}>
+                    <span>{item.sku}</span>
+                    <strong>{item.name}</strong>
+                    <input type="number" min="1" max={item.stock} value={item.quantity} onChange={(event) => updateCartQuantity(item.partId, Number(event.target.value))} />
+                    <em>{money(Number(item.price) * item.quantity)}</em>
+                  </div>
+                ))}
+              </div>
+              <div className="cart-total"><span>Total</span><strong>{money(cartTotal)}</strong></div>
+              <div className="cart-total small"><span>Unidades</span><strong>{cartUnits}</strong></div>
+              <fieldset className="payment-box">
+                <legend>Metodo de pago</legend>
+                {["Efectivo", "Transferencia", "Transbank"].map((method) => (
+                  <label className="payment-option" key={method}><input type="radio" name="paymentMethod" checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} /><span>{method}</span></label>
+                ))}
+              </fieldset>
+              <button className="primary-button full" type="button" onClick={registerPartSale} disabled={!partsCart.length}>Registrar venta</button>
+            </aside>
+          </div>
         </section>
 
         <section className={`view ${activeView === "inventory" ? "active" : ""}`}>
@@ -801,12 +919,13 @@ export default function HomePage() {
                 <div className="list-item"><strong>Vehiculos</strong><span>{data.vehicles.length}</span></div>
                 <div className="list-item"><strong>Ordenes</strong><span>{data.workOrders.length}</span></div>
                 <div className="list-item"><strong>Repuestos</strong><span>{data.parts.length}</span></div>
+                <div className="list-item"><strong>Ventas repuestos</strong><span>{data.partSales.length}</span></div>
               </div>
               <button className="primary-button full" type="button" onClick={exportBackup}>Descargar JSON</button>
             </section>
             <section className="panel">
               <div className="panel-head"><h2>Formato</h2></div>
-              <pre>{JSON.stringify({ customers: data.customers.length, vehicles: data.vehicles.length, workOrders: data.workOrders.length, parts: data.parts.length }, null, 2)}</pre>
+              <pre>{JSON.stringify({ customers: data.customers.length, vehicles: data.vehicles.length, workOrders: data.workOrders.length, parts: data.parts.length, partSales: data.partSales.length }, null, 2)}</pre>
             </section>
           </div>
         </section>
