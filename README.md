@@ -8,9 +8,12 @@ El sistema debe centralizar clientes, vehiculos por patente, ordenes de trabajo,
 
 Fase 0 completada: estructura inicial y documentacion base.
 
-Fase 1 parcial y primer flujo MVP backend implementados:
+Fase 1 parcial y primer flujo MVP implementados sobre una app Next.js fullstack lista para Vercel:
 
-- API Node.js + TypeScript.
+- App Router en `app/`.
+- API serverless en `app/api/`.
+- Capa PostgreSQL/Supabase en `lib/db`.
+- Fallback en memoria para desarrollo cuando `DATABASE_URL` no existe.
 - Login demo con JWT.
 - Clientes.
 - Vehiculos con patente normalizada y unica.
@@ -23,7 +26,7 @@ Fase 1 parcial y primer flujo MVP backend implementados:
 - Dashboard basico.
 - Web administrativa minima conectada al API.
 
-Persistencia actual: repositorio en memoria para desarrollo y pruebas. La migracion SQL inicial para PostgreSQL esta creada en `services/api/migrations/001_initial_schema.sql`.
+Persistencia actual: PostgreSQL/Supabase cuando `DATABASE_URL` esta configurado; memoria local solo para desarrollo/demo. La migracion SQL inicial para Supabase esta creada en `supabase/migrations/20260825000000_initial_schema.sql`.
 
 ## Stack inicial aprobado
 
@@ -44,16 +47,17 @@ Este flujo tiene prioridad sobre funciones secundarias.
 ## Estructura del repositorio
 
 ```text
+app/          Aplicacion Next.js y Route Handlers para Vercel.
 apps/
-  mobile/      Aplicacion movil Flutter.
-  web/         Web administrativa responsiva.
+  mobile/    Aplicacion movil Flutter futura.
+  web/       Boceto HTML historico.
+lib/          Configuracion, DB, Supabase y store operativo.
 services/
-  api/         Backend Node.js + TypeScript.
-packages/
-  shared/      Tipos, contratos y utilidades compartidas.
-infra/         Configuracion de despliegue, base de datos y servicios.
-docs/          Documentacion tecnica adicional.
-scripts/       Herramientas operativas del proyecto.
+  api/       Backend Express historico/local de referencia.
+packages/    Tipos, contratos y utilidades compartidas.
+infra/       Configuracion de despliegue, base de datos y servicios.
+docs/        Documentacion tecnica adicional.
+scripts/     Herramientas operativas del proyecto.
 ```
 
 ## Documentos principales
@@ -70,10 +74,9 @@ scripts/       Herramientas operativas del proyecto.
 
 No avanzar de fase sin estabilidad, pruebas relevantes, documentacion actualizada y aprobacion explicita.
 
-## Ejecutar backend
+## Ejecutar app Vercel/Next
 
 ```bash
-cd services/api
 npm install
 npm run dev
 ```
@@ -86,15 +89,8 @@ Credenciales demo:
 Health check:
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/health/db
 ```
 
-## Ejecutar web
-
-Con el backend levantado en `http://localhost:3000`, abrir:
-
-```text
-apps/web/index.html
-```
-
-La web permite iniciar sesion demo, crear cliente, vehiculo, orden, repuesto, descontar stock y buscar historial por patente.
+La web permite iniciar sesion demo, crear cliente, vehiculo, orden, repuesto, descontar stock y buscar historial por patente desde `http://localhost:3000`.

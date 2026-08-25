@@ -25,18 +25,29 @@ Si se usa deploy key, debe ser una llave nueva y exclusiva para este repo.
 
 ## Vercel
 
-El repo ya incluye `vercel.json` para servir el boceto funcional:
+El repo incluye una aplicacion Next.js en la raiz, siguiendo la base tecnica del proyecto Comercial JRD:
 
-- `/` -> `apps/web/boceto-demo.html`
-- `/demo` -> `apps/web/boceto-demo.html`
-- `/app` -> `apps/web/index.html`
+- `/` -> app operativa Next.js
+- `/api/health` -> health general
+- `/api/health/db` -> health PostgreSQL/Supabase
+- `/api/*` -> endpoints operativos
 
-Variables futuras:
+Configuracion Vercel:
+
+```text
+Framework Preset: Next.js
+Build Command: npm run build
+Install Command: npm install
+Output Directory: .next
+```
+
+Variables:
 
 ```text
 DATABASE_URL
-SUPABASE_URL
-SUPABASE_ANON_KEY
+DATABASE_SSL=true
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 JWT_SECRET
 ADMIN_EMAIL
@@ -63,6 +74,14 @@ No reutilizar la base de FlowStock.
 
 ## Estado actual
 
-El frontend demo es desplegable como sitio estatico.
+La aplicacion raiz es desplegable en Vercel como Next.js fullstack.
 
-El backend API corre localmente y tiene migracion SQL preparada. Falta conectar repositorio persistente a PostgreSQL/Supabase antes de declarar backend productivo.
+Si `DATABASE_URL` esta configurado, la API usa PostgreSQL/Supabase. Si no esta configurado, usa memoria local solo para desarrollo/demo.
+
+Antes de declarar productivo:
+
+- aplicar la migracion Supabase;
+- configurar variables en Vercel;
+- verificar `/api/health/db`;
+- crear `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` reales;
+- revisar RLS/politicas si se expone acceso directo desde Supabase.

@@ -1,0 +1,27 @@
+{
+  "name": "taller-automotriz-pablo",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Next.js App Router application for Taller Automotriz Pablo.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "node --check next.config.js && node --check lib/config.js && node --check lib/db/pool.js && node --check lib/db/schema.js && node --check lib/supabase/server.js && node --check lib/store.js && node --check lib/api.js && node --check app/api/health/route.js && node --check app/api/health/db/route.js && node --check app/api/[[...segments]]/route.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "next": "^16.2.10",
+    "pg": "^8.16.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {}
+}
