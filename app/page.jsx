@@ -28,8 +28,9 @@ const vehiclePresets = [
 const views = {
   dashboard: "Panel",
   reception: "Recepcion",
+  vehicles: "Vehiculos",
   orders: "Ordenes",
-  inventory: "Inventario",
+  inventory: "Repuestos",
   history: "Historial",
   closeout: "Cierre",
   backup: "Respaldo",
@@ -51,6 +52,7 @@ export default function HomePage() {
   const [log, setLog] = useState([]);
   const [plateSearch, setPlateSearch] = useState("");
   const [history, setHistory] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [partSearch, setPartSearch] = useState("");
   const [toast, setToast] = useState("");
@@ -61,6 +63,20 @@ export default function HomePage() {
   const lowStockParts = useMemo(() => data.parts.filter((part) => Number(part.stock) <= Number(part.minimumStock || 0)), [data.parts]);
   const inventoryValue = useMemo(() => data.parts.reduce((total, part) => total + Number(part.stock || 0) * Number(part.cost || 0), 0), [data.parts]);
   const finishedOrders = useMemo(() => data.workOrders.filter((order) => ["listo", "entregado"].includes(order.state)).length, [data.workOrders]);
+  const activeVehicles = useMemo(() => new Set(data.workOrders.filter((order) => !["entregado", "detenido"].includes(order.state)).map((order) => order.vehicleId)).size, [data.workOrders]);
+
+  const filteredVehicles = useMemo(() => {
+    const term = vehicleSearch.trim().toLowerCase();
+    if (!term) return data.vehicles;
+    return data.vehicles.filter((vehicle) => {
+      const customer = customerById(vehicle.customerId);
+      return [vehicle.plate, vehicle.brand, vehicle.model, vehicle.mileage, customer?.name, customer?.phone]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+  }, [data.vehicles, data.customers, vehicleSearch]);
 
   const filteredOrders = useMemo(() => {
     const term = orderSearch.trim().toLowerCase();
@@ -100,6 +116,14 @@ export default function HomePage() {
 
   function customerById(id) {
     return data.customers.find((customer) => customer.id === id);
+  }
+
+  function ordersByVehicle(vehicleId) {
+    return data.workOrders.filter((order) => order.vehicleId === vehicleId);
+  }
+
+  function latestOrderForVehicle(vehicleId) {
+    return ordersByVehicle(vehicleId)[0];
   }
 
   async function api(path, options = {}) {
@@ -415,23 +439,23 @@ export default function HomePage() {
 
         <section className={`view ${activeView === "dashboard" ? "active" : ""}`}>
           <div className="metrics-grid">
-            <article className="metric"><span>Ordenes abiertas</span><strong>{summary.openWorkOrders}</strong></article>
-            <article className="metric"><span>Vehiculos</span><strong>{data.vehicles.length}</strong></article>
-            <article className="metric"><span>Valor inventario</span><strong>{money(inventoryValue)}</strong></article>
-            <article className="metric warning"><span>Stock bajo</span><strong>{summary.lowStockCount}</strong></article>
+            <article className="metric"><span>Vehiculos registrados</span><strong>{data.vehicles.length}</strong></article>
+            <article className="metric"><span>En taller</span><strong>{activeVehicles}</strong></article>
+            <article className="metric"><span>Valor repuestos</span><strong>{money(inventoryValue)}</strong></article>
+            <article className="metric warning"><span>Repuestos criticos</span><strong>{summary.lowStockCount}</strong></article>
           </div>
 
           <div className="split">
             <section className="panel">
               <div className="panel-head">
-                <h2>Accion rapida</h2>
+                <h2>Buscar vehiculo</h2>
                 <button className="primary-button" type="button" onClick={() => setActiveView("reception")}>Nuevo ingreso</button>
               </div>
               <div className="scanner-strip">
                 <input value={plateSearch} onChange={(event) => setPlateSearch(event.target.value.toUpperCase())} placeholder="Buscar patente" />
                 <button type="button" onClick={searchVehicle}>Buscar</button>
               </div>
-              <div className="empty-state">El flujo principal es recibir el auto, abrir orden y dejarlo en cola.</div>
+              <div className="empty-state">La patente manda: desde ahi ves historial, ordenes y estado del auto.</div>
             </section>
 
             <section className="panel">
@@ -439,7 +463,7 @@ export default function HomePage() {
                 <h2>Alertas de stock</h2>
                 <div className="button-row">
                   <button className="ghost-button" type="button" onClick={sendLowStockWhatsapp}>Enviar pedido</button>
-                  <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Revisar</button>
+                <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Ver repuestos</button>
                 </div>
               </div>
               <div className="list">
@@ -455,10 +479,10 @@ export default function HomePage() {
 
           <section className="panel table-panel">
             <div className="panel-head">
-              <h2>Ultimas ordenes</h2>
-              <button className="ghost-button" type="button" onClick={() => setActiveView("orders")}>Ver todas</button>
+              <h2>Vehiculos recientes</h2>
+              <button className="ghost-button" type="button" onClick={() => setActiveView("vehicles")}>Ver todos</button>
             </div>
-            {renderOrdersTable(latestOrders)}
+            {renderVehiclesTable(data.vehicles.slice(0, 6))}
           </section>
         </section>
 
@@ -516,6 +540,16 @@ export default function HomePage() {
           </section>
         </section>
 
+        <section className={`view ${activeView === "vehicles" ? "active" : ""}`}>
+          <section className="panel table-panel">
+            <div className="panel-head">
+              <h2>Vehiculos</h2>
+              <input value={vehicleSearch} onChange={(event) => setVehicleSearch(event.target.value)} placeholder="Buscar por patente, cliente, marca o modelo" />
+            </div>
+            {renderVehiclesTable(filteredVehicles, true)}
+          </section>
+        </section>
+
         <section className={`view ${activeView === "inventory" ? "active" : ""}`}>
           <div className="split">
             <section className="panel">
@@ -551,8 +585,8 @@ export default function HomePage() {
           </div>
 
           <section className="panel table-panel">
-            <div className="panel-head">
-              <h2>Repuestos</h2>
+              <div className="panel-head">
+              <h2>Repuestos del taller</h2>
               <input value={partSearch} onChange={(event) => setPartSearch(event.target.value)} placeholder="Buscar repuesto" />
             </div>
             <div className="table-wrap">
@@ -667,6 +701,34 @@ export default function HomePage() {
                     </select>
                   ) : order.state}</td>
                   {editable ? <td><button className="ghost-button" type="button" onClick={() => { setPlateSearch(vehicle?.plate || ""); setActiveView("history"); }}>Historial</button></td> : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  function renderVehiclesTable(vehicles, detailed = false) {
+    return (
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Patente</th><th>Vehiculo</th><th>Cliente</th><th>Kilometraje</th><th>Ultima orden</th>{detailed ? <th></th> : null}</tr>
+          </thead>
+          <tbody>
+            {vehicles.map((vehicle) => {
+              const customer = customerById(vehicle.customerId);
+              const order = latestOrderForVehicle(vehicle.id);
+              return (
+                <tr key={vehicle.id}>
+                  <td><strong>{vehicle.plate}</strong></td>
+                  <td>{vehicle.brand} {vehicle.model}</td>
+                  <td>{customer?.name || "-"}</td>
+                  <td>{Number(vehicle.mileage || 0).toLocaleString("es-CL")} km</td>
+                  <td>{order ? `${order.state} / ${order.reason}` : "Sin orden"}</td>
+                  {detailed ? <td><button className="ghost-button" type="button" onClick={() => { setPlateSearch(vehicle.plate); setActiveView("history"); }}>Historial</button></td> : null}
                 </tr>
               );
             })}
