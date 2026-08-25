@@ -13,9 +13,6 @@ const initialForm = {
     reason: "Mantencion general",
     priority: "normal"
   },
-  customer: { name: "", phone: "", email: "" },
-  vehicle: { customerId: "", plate: "", brand: "", model: "", mileage: 0 },
-  order: { vehicleId: "", reason: "", mileage: 0, priority: "normal" },
   part: { sku: "", name: "", cost: 0, price: 0, stock: 0, minimumStock: 0 },
   consume: { workOrderId: "", partId: "", quantity: 1 }
 };
@@ -28,7 +25,22 @@ const vehiclePresets = [
   { brand: "Nissan", model: "Versa" }
 ];
 
+const views = {
+  dashboard: "Panel",
+  reception: "Recepcion",
+  orders: "Ordenes",
+  inventory: "Inventario",
+  history: "Historial",
+  account: "Cuenta"
+};
+
+const orderStates = ["recibido", "en_diagnostico", "esperando_aprobacion", "en_reparacion", "esperando_repuesto", "listo", "entregado", "detenido"];
+
+const money = (value) =>
+  new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value) || 0);
+
 export default function HomePage() {
+  const [activeView, setActiveView] = useState("dashboard");
   const [token, setToken] = useState("");
   const [session, setSession] = useState("Sin sesion");
   const [forms, setForms] = useState(initialForm);
@@ -37,14 +49,45 @@ export default function HomePage() {
   const [log, setLog] = useState([]);
   const [plateSearch, setPlateSearch] = useState("");
   const [history, setHistory] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [partSearch, setPartSearch] = useState("");
   const [busy, setBusy] = useState(false);
 
   const stateCount = useMemo(() => Object.keys(summary.workOrdersByState || {}).length, [summary]);
-  const latestOrders = useMemo(() => data.workOrders.slice(0, 5), [data.workOrders]);
+  const latestOrders = useMemo(() => data.workOrders.slice(0, 6), [data.workOrders]);
+  const lowStockParts = useMemo(() => data.parts.filter((part) => Number(part.stock) <= Number(part.minimumStock || 0)), [data.parts]);
+
+  const filteredOrders = useMemo(() => {
+    const term = orderSearch.trim().toLowerCase();
+    if (!term) return data.workOrders;
+    return data.workOrders.filter((order) => {
+      const vehicle = vehicleById(order.vehicleId);
+      const customer = customerById(vehicle?.customerId);
+      return [order.reason, order.state, order.priority, vehicle?.plate, vehicle?.brand, vehicle?.model, customer?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+  }, [data.workOrders, data.vehicles, data.customers, orderSearch]);
+
+  const filteredParts = useMemo(() => {
+    const term = partSearch.trim().toLowerCase();
+    if (!term) return data.parts;
+    return data.parts.filter((part) => [part.sku, part.name, part.brand, part.location].filter(Boolean).join(" ").toLowerCase().includes(term));
+  }, [data.parts, partSearch]);
 
   function addLog(message, payload) {
     const line = payload ? `${message}\n${JSON.stringify(payload, null, 2)}` : message;
-    setLog((items) => [`${new Date().toLocaleTimeString()} ${line}`, ...items].slice(0, 14));
+    setLog((items) => [`${new Date().toLocaleTimeString()} ${line}`, ...items].slice(0, 16));
+  }
+
+  function vehicleById(id) {
+    return data.vehicles.find((vehicle) => vehicle.id === id);
+  }
+
+  function customerById(id) {
+    return data.customers.find((customer) => customer.id === id);
   }
 
   async function api(path, options = {}) {
@@ -130,6 +173,7 @@ export default function HomePage() {
         priority: "normal"
       }
     }));
+    setActiveView("reception");
   }
 
   async function submitQuickReception(event) {
@@ -161,7 +205,8 @@ export default function HomePage() {
         })
       });
       setForms((current) => ({ ...current, quick: initialForm.quick }));
-      addLog("Ingreso rapido creado", { customer: customer.data.name, plate: vehicle.data.plate, order: order.data.id });
+      setActiveView("orders");
+      addLog("Ingreso creado", { cliente: customer.data.name, patente: vehicle.data.plate, orden: order.data.id });
       await refresh();
     } catch (error) {
       addLog(`Error recepcion: ${error.message}`);
@@ -170,15 +215,15 @@ export default function HomePage() {
     }
   }
 
-  async function submit(group, endpoint, event) {
+  async function createPart(event) {
     event.preventDefault();
     try {
-      const result = await api(endpoint, { method: "POST", body: JSON.stringify(forms[group]) });
-      setForms((current) => ({ ...current, [group]: initialForm[group] }));
-      addLog("Registro creado", result.data);
+      const result = await api("/parts", { method: "POST", body: JSON.stringify(forms.part) });
+      setForms((current) => ({ ...current, part: initialForm.part }));
+      addLog("Repuesto creado", result.data);
       await refresh();
     } catch (error) {
-      addLog(`Error: ${error.message}`);
+      addLog(`Error repuesto: ${error.message}`);
     }
   }
 
@@ -194,6 +239,18 @@ export default function HomePage() {
       await refresh();
     } catch (error) {
       addLog(`Error stock: ${error.message}`);
+    }
+  }
+
+  async function updateOrderState(orderId, state) {
+    try {
+      await api(`/work-orders/${orderId}/state`, {
+        method: "PATCH",
+        body: JSON.stringify({ state })
+      });
+      await refresh();
+    } catch (error) {
+      addLog(`Error estado: ${error.message}`);
     }
   }
 
@@ -224,162 +281,258 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <p className="eyebrow">Taller Automotriz Pablo</p>
-          <h1>Mostrador de recepcion</h1>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">TP</div>
+          <div>
+            <strong>Taller Pablo</strong>
+            <span>Recepcion e inventario</span>
+          </div>
         </div>
-        <div className="header-actions">
-          <span className="session">{session}</span>
-          <button type="button" className="ghost dark" onClick={fillDemoReception}>Datos demo</button>
-          <button type="button" onClick={() => login().catch((error) => addLog(`Error login: ${error.message}`))}>Entrar demo</button>
+
+        <nav className="nav" aria-label="Principal">
+          {Object.entries(views).map(([id, label]) => (
+            <button key={id} className={`nav-item ${activeView === id ? "active" : ""}`} type="button" onClick={() => setActiveView(id)}>
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="session-box">
+          <span>Cuenta</span>
+          <strong>Taller Automotriz Pablo</strong>
+          <small>{session}</small>
+          <button className="ghost-button" type="button" onClick={() => refresh().catch((error) => addLog(`Error refrescar: ${error.message}`))}>Actualizar</button>
         </div>
-      </header>
+      </aside>
 
-      <section className="workspace">
-        <section className="desk-layout">
-          <form id="recepcion" className="intake-card" onSubmit={submitQuickReception}>
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Recepcion rapida</p>
-                <h2>Crear ingreso en un solo paso</h2>
-              </div>
-              <span className="badge">Cliente + vehiculo + orden</span>
-            </div>
+      <section className="content">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">{new Date().toLocaleDateString("es-CL", { weekday: "long", day: "2-digit", month: "long" })}</p>
+            <h1>{views[activeView]}</h1>
+          </div>
+          <div className="topbar-actions">
+            <span className="sync-pill">Demo local</span>
+            <button className="ghost-button" type="button" onClick={fillDemoReception}>Datos demo</button>
+          </div>
+        </header>
 
-            <div className="form-block">
-              <h3>1. Cliente</h3>
-              <div className="field-grid two">
-                <label>Nombre
-                  <input value={forms.quick.customerName} onChange={(event) => updateForm("quick", "customerName", event.target.value)} placeholder="Nombre del cliente" required minLength={2} />
-                </label>
-                <label>Telefono / WhatsApp
-                  <input value={forms.quick.phone} onChange={(event) => updateForm("quick", "phone", event.target.value)} placeholder="+569..." required minLength={6} />
-                </label>
-              </div>
-            </div>
+        <section className={`view ${activeView === "dashboard" ? "active" : ""}`}>
+          <div className="metrics-grid">
+            <article className="metric"><span>Ordenes abiertas</span><strong>{summary.openWorkOrders}</strong></article>
+            <article className="metric"><span>Vehiculos</span><strong>{data.vehicles.length}</strong></article>
+            <article className="metric"><span>Repuestos</span><strong>{data.parts.length}</strong></article>
+            <article className="metric warning"><span>Stock bajo</span><strong>{summary.lowStockCount}</strong></article>
+          </div>
 
-            <div className="form-block">
-              <h3>2. Vehiculo</h3>
-              <div className="field-grid four">
-                <label>Patente
-                  <input className="plate-input" value={forms.quick.plate} onChange={(event) => updateForm("quick", "plate", event.target.value.toUpperCase())} placeholder="ABCD12" required minLength={4} maxLength={10} />
-                </label>
-                <label>Marca
-                  <input value={forms.quick.brand} onChange={(event) => updateForm("quick", "brand", event.target.value)} placeholder="Toyota" required minLength={2} />
-                </label>
-                <label>Modelo
-                  <input value={forms.quick.model} onChange={(event) => updateForm("quick", "model", event.target.value)} placeholder="Yaris" required />
-                </label>
-                <label>Kilometraje
-                  <input value={forms.quick.mileage} onChange={(event) => updateForm("quick", "mileage", Number(event.target.value))} type="number" min="0" required />
-                </label>
+          <div className="split">
+            <section className="panel">
+              <div className="panel-head">
+                <h2>Accion rapida</h2>
+                <button className="primary-button" type="button" onClick={() => setActiveView("reception")}>Nuevo ingreso</button>
               </div>
-              <div className="chips" aria-label="Modelos frecuentes">
-                {vehiclePresets.map((preset) => <button key={`${preset.brand}-${preset.model}`} type="button" className="chip" onClick={() => applyVehiclePreset(preset)}>{preset.brand} {preset.model}</button>)}
+              <div className="scanner-strip">
+                <input value={plateSearch} onChange={(event) => setPlateSearch(event.target.value.toUpperCase())} placeholder="Buscar patente" />
+                <button type="button" onClick={searchVehicle}>Buscar</button>
               </div>
-            </div>
-
-            <div className="form-block">
-              <h3>3. Trabajo</h3>
-              <div className="field-grid service">
-                <label>Motivo
-                  <input value={forms.quick.reason} onChange={(event) => updateForm("quick", "reason", event.target.value)} list="service-presets" required minLength={3} />
-                  <datalist id="service-presets">
-                    {servicePresets.map((preset) => <option key={preset} value={preset} />)}
-                  </datalist>
-                </label>
-                <label>Prioridad
-                  <select value={forms.quick.priority} onChange={(event) => updateForm("quick", "priority", event.target.value)}>
-                    <option value="normal">Normal</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                    <option value="baja">Baja</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <button type="submit" className="primary-action" disabled={busy}>{busy ? "Ingresando..." : "Ingresar vehiculo y abrir orden"}</button>
-          </form>
-
-          <aside className="side-stack">
-            <section className="summary-card">
-              <p className="eyebrow">Hoy</p>
-              <div className="summary-grid">
-                <div><strong>{summary.openWorkOrders}</strong><span>abiertas</span></div>
-                <div><strong>{data.vehicles.length}</strong><span>vehiculos</span></div>
-                <div><strong>{summary.lowStockCount}</strong><span>bajo stock</span></div>
-                <div><strong>{stateCount}</strong><span>estados</span></div>
-              </div>
+              <div className="empty-state">El flujo principal es recibir el auto, abrir orden y dejarlo en cola.</div>
             </section>
 
-            <section id="ordenes" className="queue-card">
-              <div className="section-head small">
-                <div>
-                  <p className="eyebrow">Cola</p>
-                  <h3>Ultimas ordenes</h3>
-                </div>
+            <section className="panel">
+              <div className="panel-head">
+                <h2>Alertas de stock</h2>
+                <button className="ghost-button" type="button" onClick={() => setActiveView("inventory")}>Revisar</button>
               </div>
-              <div className="order-list">
-                {latestOrders.length === 0 ? <p className="empty">Sin ordenes aun.</p> : latestOrders.map((order) => {
-                  const vehicle = data.vehicles.find((item) => item.id === order.vehicleId);
-                  return (
-                    <div className="order-item" key={order.id}>
-                      <strong>{vehicle?.plate || order.id.slice(0, 8)}</strong>
-                      <span>{order.reason}</span>
-                      <em>{order.state} / {order.priority}</em>
-                    </div>
-                  );
-                })}
+              <div className="list">
+                {lowStockParts.length === 0 ? <div className="empty-state">Sin alertas.</div> : lowStockParts.map((part) => (
+                  <div className="list-item" key={part.id}>
+                    <strong>{part.name}</strong>
+                    <span>{part.sku} / stock {part.stock}</span>
+                  </div>
+                ))}
               </div>
             </section>
-          </aside>
-        </section>
+          </div>
 
-        <section className="secondary-layout">
-          <form id="inventario" className="module-card" onSubmit={(event) => submit("part", "/parts", event)}>
-            <h3>Inventario rapido</h3>
-            <div className="field-grid two compact">
-              <label>SKU <input value={forms.part.sku} onChange={(event) => updateForm("part", "sku", event.target.value)} required /></label>
-              <label>Repuesto <input value={forms.part.name} onChange={(event) => updateForm("part", "name", event.target.value)} required /></label>
-              <label>Precio <input value={forms.part.price} onChange={(event) => updateForm("part", "price", Number(event.target.value))} type="number" min="0" required /></label>
-              <label>Stock <input value={forms.part.stock} onChange={(event) => updateForm("part", "stock", Number(event.target.value))} type="number" min="0" required /></label>
+          <section className="panel table-panel">
+            <div className="panel-head">
+              <h2>Ultimas ordenes</h2>
+              <button className="ghost-button" type="button" onClick={() => setActiveView("orders")}>Ver todas</button>
             </div>
-            <input type="hidden" value={forms.part.cost} readOnly />
-            <input type="hidden" value={forms.part.minimumStock} readOnly />
-            <button type="submit">Guardar repuesto</button>
-          </form>
-
-          <form className="module-card" onSubmit={consumePart}>
-            <h3>Descontar stock</h3>
-            <label>Orden <select value={forms.consume.workOrderId} onChange={(event) => updateForm("consume", "workOrderId", event.target.value)} required>
-              <option value="">Seleccionar</option>
-              {data.workOrders.map((order) => <option key={order.id} value={order.id}>{order.id.slice(0, 8)} {order.state}</option>)}
-            </select></label>
-            <label>Repuesto <select value={forms.consume.partId} onChange={(event) => updateForm("consume", "partId", event.target.value)} required>
-              <option value="">Seleccionar</option>
-              {data.parts.map((part) => <option key={part.id} value={part.id}>{part.sku} {part.name} ({part.stock})</option>)}
-            </select></label>
-            <label>Cantidad <input value={forms.consume.quantity} onChange={(event) => updateForm("consume", "quantity", Number(event.target.value))} type="number" min="1" required /></label>
-            <button type="submit">Descontar</button>
-          </form>
-
-          <section id="historial" className="module-card">
-            <h3>Historial por patente</h3>
-            <div className="row">
-              <input className="plate-input" value={plateSearch} onChange={(event) => setPlateSearch(event.target.value.toUpperCase())} placeholder="ABCD12" />
-              <button type="button" onClick={searchVehicle}>Buscar</button>
-            </div>
-            <pre>{history}</pre>
+            {renderOrdersTable(latestOrders)}
           </section>
         </section>
 
-        <section className="activity-log">
-          <h3>Actividad</h3>
-          <pre>{log.join("\n\n")}</pre>
+        <section className={`view ${activeView === "reception" ? "active" : ""}`}>
+          <div className="sales-layout">
+            <form className="panel" onSubmit={submitQuickReception}>
+              <div className="panel-head">
+                <h2>Ingreso con patente</h2>
+                <span className="mode-pill">Mostrador activo</span>
+              </div>
+              <div className="form-grid">
+                <label>Cliente<input value={forms.quick.customerName} onChange={(event) => updateForm("quick", "customerName", event.target.value)} placeholder="Nombre del cliente" required minLength={2} /></label>
+                <label>Telefono<input value={forms.quick.phone} onChange={(event) => updateForm("quick", "phone", event.target.value)} placeholder="+569..." required minLength={6} /></label>
+                <label>Patente<input value={forms.quick.plate} onChange={(event) => updateForm("quick", "plate", event.target.value.toUpperCase())} placeholder="ABCD12" required minLength={4} maxLength={10} /></label>
+                <label>Kilometraje<input value={forms.quick.mileage} onChange={(event) => updateForm("quick", "mileage", Number(event.target.value))} type="number" min="0" required /></label>
+                <label>Marca<input value={forms.quick.brand} onChange={(event) => updateForm("quick", "brand", event.target.value)} placeholder="Toyota" required minLength={2} /></label>
+                <label>Modelo<input value={forms.quick.model} onChange={(event) => updateForm("quick", "model", event.target.value)} placeholder="Yaris" required /></label>
+                <label className="wide">Trabajo solicitado<input value={forms.quick.reason} onChange={(event) => updateForm("quick", "reason", event.target.value)} list="service-presets" required minLength={3} /></label>
+                <label>Prioridad<select value={forms.quick.priority} onChange={(event) => updateForm("quick", "priority", event.target.value)}>
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                  <option value="baja">Baja</option>
+                </select></label>
+                <datalist id="service-presets">
+                  {servicePresets.map((preset) => <option key={preset} value={preset} />)}
+                </datalist>
+              </div>
+              <div className="button-row">
+                {vehiclePresets.map((preset) => <button key={`${preset.brand}-${preset.model}`} type="button" className="ghost-button" onClick={() => applyVehiclePreset(preset)}>{preset.brand} {preset.model}</button>)}
+              </div>
+              <button className="primary-button full" type="submit" disabled={busy}>{busy ? "Ingresando..." : "Crear cliente, vehiculo y orden"}</button>
+            </form>
+
+            <aside className="panel cart-panel">
+              <div className="panel-head"><h2>Resumen</h2></div>
+              <div className="cart-list">
+                <div className="cart-line"><span>Cliente</span><strong>{forms.quick.customerName || "-"}</strong></div>
+                <div className="cart-line"><span>Patente</span><strong>{forms.quick.plate || "-"}</strong></div>
+                <div className="cart-line"><span>Vehiculo</span><strong>{[forms.quick.brand, forms.quick.model].filter(Boolean).join(" ") || "-"}</strong></div>
+                <div className="cart-line"><span>Trabajo</span><strong>{forms.quick.reason || "-"}</strong></div>
+              </div>
+              <div className="empty-state">Al guardar queda inmediatamente visible en Ordenes.</div>
+            </aside>
+          </div>
+        </section>
+
+        <section className={`view ${activeView === "orders" ? "active" : ""}`}>
+          <section className="panel table-panel">
+            <div className="panel-head">
+              <h2>Ordenes de trabajo</h2>
+              <input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Buscar por patente, cliente o estado" />
+            </div>
+            {renderOrdersTable(filteredOrders, true)}
+          </section>
+        </section>
+
+        <section className={`view ${activeView === "inventory" ? "active" : ""}`}>
+          <div className="split">
+            <section className="panel">
+              <div className="panel-head"><h2>Agregar repuesto</h2></div>
+              <form className="form-grid" onSubmit={createPart}>
+                <label>SKU<input value={forms.part.sku} onChange={(event) => updateForm("part", "sku", event.target.value)} required /></label>
+                <label>Nombre<input value={forms.part.name} onChange={(event) => updateForm("part", "name", event.target.value)} required /></label>
+                <label>Precio venta<input value={forms.part.price} onChange={(event) => updateForm("part", "price", Number(event.target.value))} type="number" min="0" required /></label>
+                <label>Costo<input value={forms.part.cost} onChange={(event) => updateForm("part", "cost", Number(event.target.value))} type="number" min="0" required /></label>
+                <label>Stock<input value={forms.part.stock} onChange={(event) => updateForm("part", "stock", Number(event.target.value))} type="number" min="0" required /></label>
+                <label>Stock minimo<input value={forms.part.minimumStock} onChange={(event) => updateForm("part", "minimumStock", Number(event.target.value))} type="number" min="0" required /></label>
+                <div className="profit-preview"><span>Margen</span><strong>{money(Number(forms.part.price) - Number(forms.part.cost))}</strong></div>
+                <button className="primary-button full" type="submit">Guardar repuesto</button>
+              </form>
+            </section>
+
+            <form className="panel" onSubmit={consumePart}>
+              <div className="panel-head"><h2>Usar en orden</h2></div>
+              <label>Orden<select value={forms.consume.workOrderId} onChange={(event) => updateForm("consume", "workOrderId", event.target.value)} required>
+                <option value="">Seleccionar</option>
+                {data.workOrders.map((order) => {
+                  const vehicle = vehicleById(order.vehicleId);
+                  return <option key={order.id} value={order.id}>{vehicle?.plate || order.id.slice(0, 8)} / {order.state}</option>;
+                })}
+              </select></label>
+              <label>Repuesto<select value={forms.consume.partId} onChange={(event) => updateForm("consume", "partId", event.target.value)} required>
+                <option value="">Seleccionar</option>
+                {data.parts.map((part) => <option key={part.id} value={part.id}>{part.sku} {part.name} ({part.stock})</option>)}
+              </select></label>
+              <label>Cantidad<input value={forms.consume.quantity} onChange={(event) => updateForm("consume", "quantity", Number(event.target.value))} type="number" min="1" required /></label>
+              <button className="primary-button full" type="submit">Descontar stock</button>
+            </form>
+          </div>
+
+          <section className="panel table-panel">
+            <div className="panel-head">
+              <h2>Repuestos</h2>
+              <input value={partSearch} onChange={(event) => setPartSearch(event.target.value)} placeholder="Buscar repuesto" />
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>SKU</th><th>Repuesto</th><th>Precio</th><th>Costo</th><th>Stock</th><th>Minimo</th></tr></thead>
+                <tbody>
+                  {filteredParts.map((part) => (
+                    <tr key={part.id}>
+                      <td>{part.sku}</td><td>{part.name}</td><td>{money(part.price)}</td><td>{money(part.cost)}</td>
+                      <td className={Number(part.stock) <= Number(part.minimumStock || 0) ? "danger-text" : ""}>{part.stock}</td><td>{part.minimumStock}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section className={`view ${activeView === "history" ? "active" : ""}`}>
+          <section className="panel">
+            <div className="panel-head"><h2>Historial por patente</h2></div>
+            <div className="scanner-strip">
+              <input value={plateSearch} onChange={(event) => setPlateSearch(event.target.value.toUpperCase())} placeholder="ABCD12" />
+              <button type="button" onClick={searchVehicle}>Buscar historial</button>
+            </div>
+            <pre>{history || "Busca una patente para ver el historial del vehiculo."}</pre>
+          </section>
+        </section>
+
+        <section className={`view ${activeView === "account" ? "active" : ""}`}>
+          <div className="split">
+            <section className="panel">
+              <div className="panel-head"><h2>Estado del sistema</h2></div>
+              <div className="list">
+                <div className="list-item"><strong>Proyecto</strong><span>Taller Pablo, separado de FlowStock</span></div>
+                <div className="list-item"><strong>Persistencia</strong><span>Memoria local hasta conectar Supabase</span></div>
+                <div className="list-item"><strong>Sesion</strong><span>{session}</span></div>
+              </div>
+            </section>
+            <section className="panel">
+              <div className="panel-head"><h2>Actividad</h2></div>
+              <pre>{log.join("\n\n") || "Sin actividad reciente."}</pre>
+            </section>
+          </div>
         </section>
       </section>
     </main>
   );
+
+  function renderOrdersTable(orders, editable = false) {
+    return (
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Patente</th><th>Cliente</th><th>Trabajo</th><th>Prioridad</th><th>Estado</th>{editable ? <th></th> : null}</tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => {
+              const vehicle = vehicleById(order.vehicleId);
+              const customer = customerById(vehicle?.customerId);
+              return (
+                <tr key={order.id}>
+                  <td><strong>{vehicle?.plate || "-"}</strong></td>
+                  <td>{customer?.name || "-"}</td>
+                  <td>{order.reason}</td>
+                  <td>{order.priority}</td>
+                  <td>{editable ? (
+                    <select value={order.state} onChange={(event) => updateOrderState(order.id, event.target.value)}>
+                      {orderStates.map((state) => <option key={state} value={state}>{state}</option>)}
+                    </select>
+                  ) : order.state}</td>
+                  {editable ? <td><button className="ghost-button" type="button" onClick={() => { setPlateSearch(vehicle?.plate || ""); setActiveView("history"); }}>Historial</button></td> : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 }
