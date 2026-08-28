@@ -62,6 +62,9 @@ const createPartSchema = z.object({
   minimumStock: z.number().int().min(0).default(0),
   location: optionalText
 });
+const createPartsBulkSchema = z.object({
+  parts: z.array(createPartSchema).min(1).max(500)
+});
 const consumePartSchema = z.object({ partId: z.uuid(), quantity: z.number().int().positive() });
 const createPartSaleSchema = z.object({
   paymentMethod: z.enum(["Efectivo", "Transferencia", "Transbank"]).default("Efectivo"),
@@ -88,9 +91,27 @@ function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, { expiresIn: "8h" });
 }
 
+function sessionCookie(token) {
+  const secure = config.nodeEnv === "production" ? "; Secure" : "";
+  return `taller_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${secure}`;
+}
+
+function expiredSessionCookie() {
+  const secure = config.nodeEnv === "production" ? "; Secure" : "";
+  return `taller_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
+}
+
+function cookieToken(request) {
+  return (request.headers.get("cookie") || "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("taller_session="))
+    ?.slice("taller_session=".length) || "";
+}
+
 async function requireAuth(request) {
   const header = request.headers.get("authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : cookieToken(request);
   if (!token) throw requestError("Missing token", 401);
 
   try {
@@ -116,7 +137,15 @@ async function dispatch(request, params) {
     if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
       throw requestError("Credenciales invalidas", 401);
     }
-    return json({ token: signToken(user), user: publicUser(user) });
+    const token = signToken(user);
+    return json(
+      { token, user: publicUser(user) },
+      { headers: { "Set-Cookie": sessionCookie(token) } }
+    );
+  }
+
+  if (method === "POST" && path.join("/") === "auth/logout") {
+    return json({ ok: true }, { headers: { "Set-Cookie": expiredSessionCookie() } });
   }
 
   if (path.join("/") === "health") {
@@ -159,7 +188,12 @@ async function dispatch(request, params) {
   }
 
   if (method === "GET" && path.join("/") === "parts") return json({ data: await store.listParts() });
+  if (method === "POST" && path.join("/") === "parts/bulk") {
+    const input = await readBody(request, createPartsBulkSchema);
+    return json({ data: await store.createPartsBulk(input.parts) }, { status: 201 });
+  }
   if (method === "POST" && path.join("/") === "parts") return json({ data: await store.createPart(await readBody(request, createPartSchema)) }, { status: 201 });
+  if (method === "DELETE" && path[0] === "parts" && path[1]) return json({ data: await store.deletePart(path[1]) });
   if (method === "GET" && path.join("/") === "part-sales") return json({ data: await store.listPartSales() });
   if (method === "POST" && path.join("/") === "part-sales") {
     const input = await readBody(request, createPartSaleSchema);
@@ -188,4 +222,4 @@ async function handle(request, context) {
   }
 }
 
-export { handle as GET, handle as POST, handle as PATCH };
+export { handle as GET, handle as POST, handle as PATCH, handle as DELETE };

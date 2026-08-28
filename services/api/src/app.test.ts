@@ -10,8 +10,8 @@ beforeEach(async () => {
   store = await AppStore.seeded();
   const app = createApp(store);
   const login = await request(app).post('/auth/login').send({
-    email: 'admin@taller.local',
-    password: 'admin12345'
+    email: 'nico@taller.local',
+    password: 'NicoTaller2026!'
   });
   token = login.body.token;
 });

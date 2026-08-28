@@ -13,8 +13,8 @@ npm test
 
 ## Credenciales demo
 
-- Email: `admin@taller.local`
-- Password: `admin12345`
+- Email: `nico@taller.local`
+- Password: `NicoTaller2026!`
 
 Se pueden cambiar con variables de entorno:
 
